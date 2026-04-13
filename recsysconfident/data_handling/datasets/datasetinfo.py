@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from pandas import DataFrame, read_csv, concat
 import os
 from recsysconfident.data_handling.splitting import time_ordered_folds
-from recsysconfident.utils.datasets import filter_positives, map_ids
+from recsysconfident.utils.datasets import map_ids
 
 
 class DatasetInfo:
@@ -100,7 +100,7 @@ class DatasetInfo:
             self.df_folds = time_ordered_folds(self.ratings_df, self.timestamp_col, n_folds=self.folds, shuffle_within_folds=shuffle)
             
             for i in range(self.folds):
-                self.df_folds[i].to_csv(f"{self.split_run_uri}/fold-{i}.csv", index=False)
+                self.df_folds[i].to_csv(f"{self.run_uri}/fold-{i}.csv", index=False)
 
 
         return self
