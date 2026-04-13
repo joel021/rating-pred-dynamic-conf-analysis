@@ -1,10 +1,10 @@
 import json
 import os
+import torch
 
 from recsysconfident.data_handling.datasets.csv_reader import CsvReader
 from recsysconfident.ml.models.cgp_rank import get_cgprank_and_dataloader
 from recsysconfident.ml.models.dropout_uncertainty_model import get_MCDropoutRecModel_and_dataloader
-import torch
 
 from recsysconfident.data_handling.datasets.amazon_products import AmazonProductsReader
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
@@ -17,9 +17,8 @@ class Environment:
 
     def __init__(self, model_name: str,
                  database_name: str,
-                 instance_dir: str,
+                 split_position,
                  batch_size: int = 1024,
-                 split_position: int = -1,
                  root_path:str="./",
                  min_inter_per_user: int=10):
         self.work_dir: str = None
@@ -27,24 +26,28 @@ class Environment:
         self.batch_size = batch_size
         self.model_name = model_name
         self.database_name = database_name
-        self.split_position = split_position
         self.root_path = root_path
         self.min_inter_per_user = min_inter_per_user
-        self.instance_dir = instance_dir
+        self.instance_dir = None
+        self.split_position = split_position
         
+        self.setup_instance_dir(None)
+
         self.load_df_info()
-        self.model_uri = f"{self.instance_dir}/model-{self.split_position}.pth"
+        self.model_uri = None
 
-        self.setup_splits_path()
+    def set_split_position(self, split_position):
+        self.split_position = split_position
+        self.setup_instance_dir(None)
 
-    def setup_splits_path(self):
+    def setup_instance_dir(self, instance_dir: str):
 
-        os.makedirs(name=f"{self.root_path}/runs", exist_ok=True)
-        splits = os.listdir(f"{self.root_path}/runs")
-        if self.split_position == -1:
-            self.split_position = len(splits)
+        if instance_dir is None:
+            self.work_dir = f"./runs/{self.database_name}-{self.model_name}"
+            instance_dir = f"{self.work_dir}-{self.split_position}"
 
-        os.makedirs(name=f"{self.root_path}/runs/data_splits/{self.database_name}/{self.split_position}", exist_ok=True)
+        self.instance_dir = instance_dir
+        os.makedirs(name=instance_dir, exist_ok=True)
 
     def load_df_info(self):
         
@@ -52,7 +55,11 @@ class Environment:
 
             with open(f"{self.root_path}/data/{self.database_name}/info.json") as f:
                 info = json.load(f)
-            self.dataset_info = DatasetInfo(**info, run_uri=self.instance_dir,database_name=self.database_name, batch_size=self.batch_size, root_uri=self.root_path)
+            run_data_uri = f"{self.root_path}/runs/data/{self.database_name}"
+            os.makedirs(name=run_data_uri, exist_ok=True)
+            self.dataset_info = DatasetInfo(**info, run_data_uri=run_data_uri,
+                                            database_name=self.database_name, 
+                                            batch_size=self.batch_size, root_uri=self.root_path)
         else:
             raise FileNotFoundError("Info file does not exists. Check if the dataset name is correct.")
 
@@ -91,13 +98,14 @@ class Environment:
         print("Interactions dataset built.")
         return self
 
-    def get_model_dataloaders(self, shuffle: bool, fold) -> tuple:
-
+    def get_model_dataloaders(self, shuffle: bool) -> tuple:
+        
+        self.model_uri = f"{self.instance_dir}/model-{self.split_position}.pth"
         self.read_split_datasets(shuffle)
         if not self.model_name in self.model_name_fn:
             raise ValueError(f"Invalid model name: {self.model_name}")
 
-        model, fit_dl, val_dl = self.model_name_fn[self.model_name](self.dataset_info, fold)
+        model, fit_dl, val_dl = self.model_name_fn[self.model_name](self.dataset_info, self.split_position)
 
         if os.path.isfile(self.model_uri):
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

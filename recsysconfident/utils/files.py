@@ -5,6 +5,8 @@ import re
 import time
 from datetime import datetime
 
+from recsysconfident.environment import Environment
+
 
 def setup_model_results_exists(run_folder: str):
 
@@ -54,7 +56,7 @@ def read_json(path: str) -> dict:
         return json.load(f)
 
 
-def export_metrics(environ, metrics: dict):
+def export_metrics(environ: Environment, metrics: dict):
     metrics_uri = f"{environ.instance_dir}/metrics-{environ.split_position}.json"
     if os.path.isfile(f"{environ.instance_dir}/metrics-{environ.split_position}.json"):
         metrics_uri = f"{environ.instance_dir}/metrics-{environ.split_position}-{time.strftime('%Y-%m-%d-%H-%M-%S')}.json"
@@ -62,7 +64,7 @@ def export_metrics(environ, metrics: dict):
         json.dump(metrics, f, indent=4)
 
 
-def export_setup(environ, setup: dict):
+def export_setup(environ: Environment, setup: dict):
     setup['fit_mode'] = 1
     setup_uri = f"{environ.instance_dir}/setup-{environ.split_position}.json"
     if os.path.isfile(f"{environ.instance_dir}/setup-{environ.split_position}.json"):

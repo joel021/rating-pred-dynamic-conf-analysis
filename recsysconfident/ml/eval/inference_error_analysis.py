@@ -16,17 +16,13 @@ from recsysconfident.ml.ranking.sample_pred_negative import SamplePredNegatives
 
 def set_elementwise_metrics(model, split_df, environ, device):
 
-    if LEARN_RANK in environ.model_name:
-        split_df = elementwise_pos_neg_scores(model, split_df, environ, device)
-        set_bpr_error(split_df)
-    else:
-        split_df.loc[:, ABS_ERROR_COL] = abs(split_df[environ.dataset_info.relevance_col] - split_df[environ.dataset_info.r_pred_col])
+    split_df.loc[:, ABS_ERROR_COL] = abs(split_df[environ.dataset_info.relevance_col] - split_df[environ.dataset_info.r_pred_col])
 
     return split_df
 
-def export_elementwise_error(model, environ: Environment, device) -> (pd.DataFrame, pd.DataFrame):
+def export_elementwise_error(model, environ: Environment, device, fold: int) -> (pd.DataFrame, pd.DataFrame):
 
-    fit_df, eval_df = environ.dataset_info.get_splits()
+    eval_df = environ.dataset_info.get_splits()[fold+1]
 
     eval_df = inference(model, eval_df, environ, device)
 

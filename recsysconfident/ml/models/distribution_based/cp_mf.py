@@ -9,7 +9,7 @@ from recsysconfident.ml.models.torchmodel import TorchModel
 
 def get_cpmf_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info, fold)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     model = CPMF(
         num_users=info.n_users,
@@ -18,7 +18,7 @@ def get_cpmf_model_and_dataloader(info: DatasetInfo, fold):
         rate_range=info.rate_range
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
 class CPMF(TorchModel):

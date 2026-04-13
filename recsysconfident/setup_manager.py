@@ -7,12 +7,12 @@ from recsysconfident.ml.fit.fit import train_model
 from recsysconfident.setup import Setup
 
 
-def export_history(setup, history, sufix):
+def export_history(environ:Environment, history, sufix):
 
-    with open(f"{setup.instance_dir}/history-{setup.split_position}{sufix}.json", "w") as f:
+    with open(f"{environ.instance_dir}/history-{environ.split_position}{sufix}.json", "w") as f:
         json.dump(history, f, indent=4)
 
-def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device):
+def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device, fold):
 
     if hasattr(model, 'train_method') and model.train_method is not None:
         history = model.train_method(model=model,
@@ -22,14 +22,14 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device)
                                      epochs=50,
                                      device=device,
                                      patience=setup.patience)
-        export_history(setup, history, "")
+        export_history(environ, history, "")
     else:
         optimizer = optim.Adam(model.parameters(),
                                lr=setup.learning_rate
                                )
         history = train_model(model, training_loader=fit_dl, validation_loader=val_dl, environ=environ,
                               optimizer=optimizer, epochs=100, device=device, patience=setup.patience)
-        export_history(setup, history, "")
+        export_history(environ, history, "")
 
         if hasattr(model, 'switch_to_ranking') and hasattr(model, 'ranking_loss'):
             print(f"Model probs trained. Switching to ranking training.")
@@ -37,6 +37,6 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device)
             history = train_model(model, training_loader=fit_dl, validation_loader=val_dl, environ=environ,
                                   optimizer=optimizer, epochs=100, device=device, patience=setup.patience)
             model.switch_to_rating()
-            export_history(setup, history, "ranking")
+            export_history(environ, history, "ranking")
 
     return model

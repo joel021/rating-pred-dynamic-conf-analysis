@@ -67,8 +67,8 @@ class MCDropoutRecModel(TorchModel):
         x = self.dropout(x)
 
         pred = self.out(x).squeeze(-1)
-        return torch.stack([pred, torch.zeros_like(pred)])
-
+        return torch.stack([pred, torch.zeros_like(pred)], dim=1)
+ 
     def regularization(self):
         reg = 0.0
         for param in self.parameters():

@@ -11,7 +11,7 @@ from recsysconfident.ml.models.torchmodel import TorchModel
 
 def get_prgat_model_and_dataloader(info: DatasetInfo):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
+    fit_dataloader, eval_dataloader = ui_ids_label(info)
 
     model = PRGAT(
         n_users=info.n_users,
@@ -20,7 +20,7 @@ def get_prgat_model_and_dataloader(info: DatasetInfo):
         rate_range=info.rate_range
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
 class PRGAT(TorchModel):

@@ -13,7 +13,7 @@ class DatasetInfo:
 
 
     def __init__(self, user_col: str, item_col: str, rating_col: str, interactions_file: str, columns: List[str],
-                 rate_range: List[float], database_name: str, run_uri: str, metadata_columns: List[str],
+                 rate_range: List[float], database_name: str, run_data_uri: str, metadata_columns: List[str],
                  folds: int=7,
                  items_file: Optional[str] = None, sep: str = ",", has_head: bool = False,
                  timestamp_col: Optional[str] = None, batch_size: int = 1024, root_uri: str = "./"):
@@ -31,7 +31,7 @@ class DatasetInfo:
         self.interactions_file: str = interactions_file
         self.items_file: Optional[str] = items_file
         self.database_name: str = database_name
-        self.run_uri: str = run_uri
+        self.run_data_uri: str = run_data_uri
 
         # Dataset Structure Info
         self.columns: List[str] = columns
@@ -70,15 +70,15 @@ class DatasetInfo:
         Splits the interactions into fit, validation, and test sets.
         Loads existing splits if files are present.
         """
-        items_path = f"{self.run_uri}/items.csv"
+        items_path = f"{self.run_data_uri}/items.csv"
 
-        os.makedirs(self.run_uri, exist_ok=True)
+        os.makedirs(self.run_data_uri, exist_ok=True)
 
-        if os.path.exists(f"{self.run_uri}/fold-0.csv") and os.path.exists(f"{self.run_uri}/fold-{self.folds-1}.csv"):
+        if os.path.exists(f"{self.run_data_uri}/fold-0.csv") and os.path.exists(f"{self.run_data_uri}/fold-{self.folds-1}.csv"):
             # Load existing splits
             self.df_folds = []
             for fold in range(self.folds):
-                self.df_folds.append(read_csv(f"{self.run_uri}/fold-{fold}.csv"))
+                self.df_folds.append(read_csv(f"{self.run_data_uri}/fold-{fold}.csv"))
 
             self.ratings_df = concat(self.df_folds, ignore_index=True)
             self.n_users = len(self.ratings_df[self.user_col].unique())
@@ -100,7 +100,7 @@ class DatasetInfo:
             self.df_folds = time_ordered_folds(self.ratings_df, self.timestamp_col, n_folds=self.folds, shuffle_within_folds=shuffle)
             
             for i in range(self.folds):
-                self.df_folds[i].to_csv(f"{self.run_uri}/fold-{i}.csv", index=False)
+                self.df_folds[i].to_csv(f"{self.run_data_uri}/fold-{i}.csv", index=False)
 
 
         return self

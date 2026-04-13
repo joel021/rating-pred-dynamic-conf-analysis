@@ -5,7 +5,7 @@ from recsysconfident.ml.models.torchmodel import TorchModel
 
 class SimpleConfModel(TorchModel):
 
-    def __init__(self, items_per_user):
+    def __init__(self, items_per_user=None):
         super().__init__(items_per_user)
 
     def l2(self, layer):

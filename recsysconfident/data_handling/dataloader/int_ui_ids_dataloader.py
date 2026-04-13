@@ -10,7 +10,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 
 def gp_data_dl(info: DatasetInfo, fold):
 
-    train_folds_df = pd.concat(info.df_folds[:,fold], ignore_index=True)
+    train_folds_df = pd.concat(info.df_folds[:fold+1], ignore_index=True)
     test_fold_df = info.df_folds[fold+1]
 
     fit_dataloader = DataLoader(
@@ -38,7 +38,7 @@ def gp_data_dl(info: DatasetInfo, fold):
 
 def ui_ids_label(info: DatasetInfo, fold):
 
-    train_folds_df = pd.concat(info.df_folds[:,fold], ignore_index=True)
+    train_folds_df = pd.concat(info.df_folds[:fold+1], ignore_index=True)
     test_fold_df = info.df_folds[fold+1]
 
     fit_dataloader = DataLoader(

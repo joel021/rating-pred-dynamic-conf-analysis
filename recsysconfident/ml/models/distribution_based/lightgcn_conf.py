@@ -13,7 +13,7 @@ from recsysconfident.ml.models.simple_confidence.simple_conf_model import Simple
 
 def get_lightgcn_conf_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info, fold)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     adj = get_adj_matrix(info.ratings_df, info)
     norm_adj = normalize_adj(adj)
@@ -28,13 +28,15 @@ def get_lightgcn_conf_model_and_dataloader(info: DatasetInfo, fold):
                  keep_prob=0.6,
                  A_split=False,
                  rmin=info.rate_range[0],
-                 rmax=info.rate_range[1])
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+                 rmax=info.rate_range[1],
+                 step=info.rate_range[2])
+    return model, fit_dataloader, eval_dataloader
 
 class LightGCN(SimpleConfModel):
 
-    def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin, rmax, dropout=True):
+    def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin:float, rmax:float, step: float, dropout=True):
         super(LightGCN, self).__init__()
+        self.delta_r = step/2.0
         self.Graph = Graph
         self.rmax = rmax
         self.rmin = rmin
