@@ -1,6 +1,10 @@
 """
 package: recsysconfident.ml.fit_eval
 """
+
+import numpy as np
+from scipy.stats import entropy
+
 import pandas as pd
 from pandas import DataFrame
 
@@ -23,8 +27,30 @@ def ranking_scores(candidates_norm_df: DataFrame, environ: Environment, k=10) ->
     }
     return scores_dict
 
-def evaluate(split_df: pd.DataFrame, environ: Environment) -> dict:
+def kl_from_columns(df, col_p, col_q, bins=50, eps=1e-12) -> dict:
+    x = df[col_p].to_numpy()
+    y = df[col_q].to_numpy()
 
+    min_val = min(x.min(), y.min())
+    max_val = max(x.max(), y.max())
+
+    p_hist, bin_edges = np.histogram(x, bins=bins, range=(min_val, max_val), density=False)
+    q_hist, _         = np.histogram(y, bins=bin_edges, density=False)
+
+    p = p_hist.astype(float)
+    q = q_hist.astype(float)
+
+    p = p / p.sum()
+    q = q / q.sum()
+
+    p = (p + eps) / (p + eps).sum()
+    q = (q + eps) / (q + eps).sum()
+
+    return {"kl_diverence": entropy(p, q)}
+
+def evaluate(split_df: pd.DataFrame, environ: Environment) -> dict:
+    
+    dist_divergence_metric = kl_from_columns(split_df, environ.dataset_info.relevance_col, environ.dataset_info.r_pred_col)
     distance_metrics = get_distance_metrics(split_df, environ)
     rmax = environ.dataset_info.rate_range[1]
     rmin = environ.dataset_info.rate_range[0]
@@ -35,7 +61,7 @@ def evaluate(split_df: pd.DataFrame, environ: Environment) -> dict:
     ranking_10metrics = ranking_scores(split_df, environ, 10)
     ranking_3metrics = ranking_scores(split_df, environ,  3)
 
-    return {**distance_metrics, **ranking_10metrics, **ranking_3metrics}
+    return {**dist_divergence_metric, **distance_metrics, **ranking_10metrics, **ranking_3metrics}
 
 def get_distance_metrics(split_df: pd.DataFrame, environ: Environment):
 
