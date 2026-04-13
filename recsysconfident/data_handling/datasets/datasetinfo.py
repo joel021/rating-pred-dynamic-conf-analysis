@@ -49,7 +49,6 @@ class DatasetInfo:
         self.n_users: int = 0
         self.n_items: int = 0
         self.batch_size: int = batch_size
-        self.ratio_t: float = 0.78  # Threshold for filtering positives
         self.folds = folds
 
     def build(self, ratings_df: DataFrame, items_df: Optional[DataFrame], shuffle: bool) -> None:
@@ -89,7 +88,6 @@ class DatasetInfo:
                 self.items_df = read_csv(items_path)
                 self.items_df.set_index(self.item_col, inplace=True, drop=True)
         else:
-            self.ratings_df = filter_positives(self.ratings_df, self.relevance_col, self.ratio_t)
 
             self.ratings_df, self.items_df = map_ids(self.ratings_df, self.items_df, self.user_col, self.item_col)
             self.n_users = len(self.ratings_df[self.user_col].unique())

@@ -2,15 +2,6 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 
-def filter_positives(df: pd.DataFrame, relevance_col: str, threshold: float=0.75):
-
-    relevance_max = df[relevance_col].max()
-
-    postives = df[relevance_col] >= relevance_max * threshold
-    df[postives, relevance_col] = 1
-    df.loc[~postives,relevance_col] = 0
-    
-    return df
 
 def map_ids(ratings_df: pd.DataFrame, items_df: pd.DataFrame, user_col: str, item_col: str):
 
