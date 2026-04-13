@@ -1,0 +1,58 @@
+import argparse
+import glob
+import json
+
+import torch
+
+from recsysconfident.environment import Environment
+from recsysconfident.ml.eval.inference_error_analysis import export_elementwise_error
+from recsysconfident.ml.eval.ranking_evaluation import evaluate
+from recsysconfident.setup import Setup
+from recsysconfident.utils.files import export_metrics, export_setup, read_json, \
+    setup_and_model_exists, setup_model_results_exists
+from recsysconfident.setup_manager import setup_fit
+
+
+def main(setup: Setup):
+    """
+    shuffle_train_split: whether shuffle the train split or use sorted by timestamp
+    """
+    print(setup.to_dict())
+    if setup_model_results_exists(setup.instance_dir) and not setup.reevaluate:
+        print("All results already obtained. Skip.")
+        return
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    environ = Environment(model_name=setup.model_name,
+                          database_name=setup.database_name,
+                          instance_dir=setup.instance_dir,
+                          batch_size=setup.batch_size,
+                          min_inter_per_user=setup.min_inter_per_user
+                          )
+    for fold in range(setup.folds - 1):
+        
+        setup.split_position = fold
+        model, fit_dl, val_dl = environ.get_model_dataloaders(True, fold)
+
+        if setup.fit_mode == 0 and not setup_and_model_exists(setup.instance_dir):
+
+            model = setup_fit(setup, model, fit_dl, val_dl, environ, device)
+
+        export_setup(environ, setup.to_dict())
+        eval_df = export_elementwise_error(model, environ, device)
+        eval_metrics = evaluate(eval_df, environ)
+        
+        export_metrics(environ, {"eval": eval_metrics})
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--setups", type=str, default="setups.json",
+                        help="Path to predefined setups JSON file")
+
+    args = parser.parse_args()
+    setup = Setup(*read_json(args.setups))
+
+    main(setup)
