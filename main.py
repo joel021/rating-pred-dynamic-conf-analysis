@@ -47,12 +47,17 @@ def main(setup: Setup):
 
 
 if __name__ == '__main__':
+    
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--setups", type=str, default="setups.json",
                         help="Path to predefined setups JSON file")
 
     args = parser.parse_args()
-    setup = Setup(*read_json(args.setups))
-
-    main(setup)
+    setups = read_json(args.setups)
+    
+    for key in setups.keys():
+        
+        print(setups[key])
+        setup = Setup(**setups[key])
+        main(setup)

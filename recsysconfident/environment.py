@@ -30,9 +30,9 @@ class Environment:
         self.split_position = split_position
         self.root_path = root_path
         self.min_inter_per_user = min_inter_per_user
-
-        self.load_df_info()
         self.instance_dir = instance_dir
+        
+        self.load_df_info()
         self.model_uri = f"{self.instance_dir}/model-{self.split_position}.pth"
 
         self.setup_splits_path()
@@ -47,12 +47,12 @@ class Environment:
         os.makedirs(name=f"{self.root_path}/runs/data_splits/{self.database_name}/{self.split_position}", exist_ok=True)
 
     def load_df_info(self):
-
+        
         if os.path.isfile(f"{self.root_path}/data/{self.database_name}/info.json"):
 
             with open(f"{self.root_path}/data/{self.database_name}/info.json") as f:
                 info = json.load(f)
-            self.dataset_info = DatasetInfo(**info, database_name=self.database_name, batch_size=self.batch_size, root_uri=self.root_path)
+            self.dataset_info = DatasetInfo(**info, run_uri=self.instance_dir,database_name=self.database_name, batch_size=self.batch_size, root_uri=self.root_path)
         else:
             raise FileNotFoundError("Info file does not exists. Check if the dataset name is correct.")
 
