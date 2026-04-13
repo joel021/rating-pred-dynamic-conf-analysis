@@ -61,7 +61,7 @@ class Environment:
         self.database_name_fn = {
             "ml-1m": MovieLensReader(self.dataset_info).read,
             "amazon-movies-tvs": AmazonProductsReader(self.dataset_info).read,
-            "netflix-prize": AmazonProductsReader(self.dataset_info).read,
+            "netflix-prize": CsvReader(self.dataset_info).read,
         }
 
         self.model_name_fn = {
