@@ -30,11 +30,11 @@ def gp_data_dl(info: DatasetInfo, fold):
     sample_df = train_folds_df.sample(n=min(1000, len(train_folds_df)))
 
     inducing_points = torch.stack([
-        torch.tensor(sample_df[info.user_col].values.astype(int), dtype=torch.long),
-        torch.tensor(sample_df[info.item_col].values.astype(int), dtype=torch.long)
+        torch.tensor(sample_df[info.user_col].values, dtype=torch.int),
+        torch.tensor(sample_df[info.item_col].values, dtype=torch.int)
     ], dim=-1)
 
-    return fit_dataloader, eval_dataloader, inducing_points
+    return fit_dataloader, eval_dataloader, inducing_points, len(train_folds_df)
 
 def ui_ids_label(info: DatasetInfo, fold):
 
