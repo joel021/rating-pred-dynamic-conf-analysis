@@ -11,6 +11,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.datasets.movie_lens_reader import MovieLensReader
 from recsysconfident.ml.models.distribution_based.lightgcn_conf import get_lightgcn_conf_model_and_dataloader
 from recsysconfident.ml.models.distribution_based.cp_mf import get_cpmf_model_and_dataloader
+from recsysconfident.ml.models.k_nearest_neighbors import get_knn_cosine_basic, get_knn_pearson_baseline_basic
 
 
 class Environment:
@@ -75,7 +76,8 @@ class Environment:
             "dropout": get_MCDropoutRecModel_and_dataloader,
             "cpmf": get_cpmf_model_and_dataloader,
             "prlightgcn": get_lightgcn_conf_model_and_dataloader,
-            "cgprank": get_cgprank_and_dataloader
+            "knn-cosine-basic": get_knn_cosine_basic,
+            "knn-pearson-baseline": get_knn_pearson_baseline_basic
         }
 
         if not self.database_name in self.database_name_fn:

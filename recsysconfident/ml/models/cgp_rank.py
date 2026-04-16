@@ -39,22 +39,21 @@ class CGPRankRatingPred(ApproximateGP):
             inducing_points,
             variational_distribution,
             learn_inducing_locations=False,
-        ).to(device)
+        )
 
         super().__init__(variational_strategy)
 
         # Likelihood
-        self.likelihood = gpytorch.likelihoods.GaussianLikelihood().to(device)
+        self.likelihood = gpytorch.likelihoods.GaussianLikelihood()
 
         # ELBO
-        self.mll = VariationalELBO(self.likelihood, self, num_data=num_data).to(device)
+        self.mll = VariationalELBO(self.likelihood, self, num_data=num_data)
 
         # Mean / Kernel
-        self.mean_module = gpytorch.means.ConstantMean().to(device)
-
-        self.user_kernel = gpytorch.kernels.IndexKernel(num_tasks=n_users+1, rank=rank).to(device)
-        self.item_kernel = gpytorch.kernels.IndexKernel(num_tasks=n_items+1, rank=rank).to(device)
-
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.user_kernel = gpytorch.kernels.IndexKernel(num_tasks=n_users, rank=rank, active_dims=(0,))
+        self.item_kernel = gpytorch.kernels.IndexKernel(num_tasks=n_items, rank=rank, active_dims=(1,))
+        
         self.covar_module = self.user_kernel * self.item_kernel
 
         # Rating normalization
@@ -65,15 +64,21 @@ class CGPRankRatingPred(ApproximateGP):
 
         if not (self.device == device):
             self.device = device
-            return self.to(device)
+
+            self.mean_module = self.mean_module.to(device)
+            self.user_kernel = self.user_kernel.to(device)
+            self.item_kernel = self.item_kernel.to(device)
+            self.likelihood = self.likelihood.to(device)
+            
+            return super().to(device)
 
         return self
 
-    def train(self, mode=True, *args):
+    def train(self, mode=True):
 
         if mode and not self.training:
             self.training = True
-            return self.train(mode)
+            return super().train(mode)
         
         elif not mode and self.training:
             self.likelihood.train(False)
@@ -105,12 +110,12 @@ class CGPRankRatingPred(ApproximateGP):
 
         optimizer.zero_grad()
 
-        inputs = torch.stack([u_ids, i_ids], dim=-1).float()
+        inputs = torch.stack([u_ids, i_ids], dim=1).long()
 
         labels = self._normalize(labels)
 
         output = self.forward(inputs)
-
+        
         loss = -self.mll(output, labels)
         loss.backward()
         optimizer.step()
@@ -122,7 +127,7 @@ class CGPRankRatingPred(ApproximateGP):
         self.likelihood.eval()
 
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
-            inputs = torch.stack([u_ids, i_ids], dim=-1).float()
+            inputs = torch.stack([u_ids, i_ids], dim=-1).long()
 
             output = self(inputs)
             preds = self.likelihood(output).mean
