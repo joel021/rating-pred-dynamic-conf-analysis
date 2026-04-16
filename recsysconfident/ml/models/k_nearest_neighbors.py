@@ -20,8 +20,8 @@ def get_knn_cosine_basic(info: DatasetInfo, fold):
         user_col=info.user_col,
         item_col=info.item_col,
         rating_col=info.relevance_col,
-        n_users=info.rate_range[0],
-        n_items=info.rate_range[1],
+        n_users=info.n_users,
+        n_items=info.n_items,
         metric='cosine',
         estimator='basic'
     )
@@ -43,8 +43,8 @@ def get_knn_pearson_baseline_basic(info: DatasetInfo, fold):
         user_col=info.user_col,
         item_col=info.item_col,
         rating_col=info.relevance_col,
-        n_users=info.rate_range[0],
-        n_items=info.rate_range[1],
+        n_users=info.n_users,
+        n_items=info.n_items,
         metric='pearson_baseline',
         estimator='baseline'
     )
@@ -65,9 +65,9 @@ class SparseKNNRecommender():
         self.estimator = estimator
         self.shr = shr
         
-        u_ids = torch.tensor(train_data_df[user_col].values, dtype=torch.long)
-        i_ids = torch.tensor(train_data_df[item_col].values, dtype=torch.long)
-        vals = torch.tensor(train_data_df[rating_col].values, dtype=torch.float32)
+        u_ids = torch.from_numpy(train_data_df[user_col].values).long()
+        i_ids = torch.from_numpy(train_data_df[item_col].values).long()
+        vals = torch.from_numpy(train_data_df[rating_col].values).float()
         
         self.item_users = {item: [] for item in range(n_items)}
         self.item_ratings = {item: [] for item in range(n_items)}
@@ -207,11 +207,39 @@ class SparseKNNRecommender():
         results = torch.zeros((batch_size, 2))
         
         for b in range(batch_size):
-            u = u_ids[b, 0].item()
-            i = i_ids[b, 0].item()
+            u = u_ids[b].item()
+            i = i_ids[b].item()
             
-            x_u = torch.index_select(self.train_sparse, 0, torch.tensor([u], dtype=torch.long)).to_dense().squeeze(0)
+            u_exists = u < self.user_means.size(0) and self.user_means[u] > 0
+            i_exists = i < self.item_means.size(0) and self.item_means[i] > 0
             
-            results[b] = self.forward(x_u, i)
-            
-        return results[:,0], results[:,1]
+            if not u_exists and not i_exists:
+                results[b, 0] = self.global_mean
+            elif not u_exists:
+                results[b, 0] = self.item_means[i]
+            elif not i_exists:
+                results[b, 0] = self.user_means[u]
+            else:
+                x_u = torch.index_select(self.train_sparse, 0, torch.tensor([u], dtype=torch.long)).to_dense().squeeze(0)
+                pred = self.forward(x_u, i)
+                
+                if pred[0] == 0.0:
+                    results[b, 0] = self.user_means[u]
+                else:
+                    results[b] = pred
+                    
+        return results[:, 0], results[:, 1]
+
+    def eval(self):
+        return self
+    
+    def train(self, mode):
+        return self
+    
+    def to(self, device):
+        return self
+
+    def train_method(self, **args):
+
+        return {}
+

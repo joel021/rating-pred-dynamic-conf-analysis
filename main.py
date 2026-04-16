@@ -38,7 +38,7 @@ def main(setup: Setup):
     
         if setup.fit_mode == 0 and not setup_and_model_exists(environ.instance_dir):
             model, fit_dl, val_dl = environ.get_model_dataloaders(True)
-            model = setup_fit(setup, model, fit_dl, val_dl, environ, device, fold)
+            model = setup_fit(setup, model, fit_dl, val_dl, environ, device)
 
             export_setup(environ, setup.to_dict())
             eval_df = export_elementwise_error(model, environ, device, fold)

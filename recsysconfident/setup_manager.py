@@ -12,7 +12,7 @@ def export_history(environ:Environment, history, sufix):
     with open(f"{environ.instance_dir}/history-{environ.split_position}{sufix}.json", "w") as f:
         json.dump(history, f, indent=4)
 
-def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device, fold):
+def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device):
 
     if hasattr(model, 'train_method') and model.train_method is not None:
         history = model.train_method(model=model,
@@ -23,6 +23,8 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device,
                                      device=device,
                                      patience=setup.patience)
         export_history(environ, history, "")
+        return model
+
     else:
         optimizer = optim.Adam(model.parameters(),
                                lr=setup.learning_rate
@@ -40,3 +42,4 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device,
             export_history(environ, history, "ranking")
 
     return model
+export_history
