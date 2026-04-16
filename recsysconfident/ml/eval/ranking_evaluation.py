@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from recsysconfident.constants import NEG_FLAG_COL
 from recsysconfident.environment import Environment
-from recsysconfident.ml.distance_metrics import rmse
+from recsysconfident.ml.distance_metrics import mae, rmse
 from recsysconfident.ml.ranking.rank_metrics import ConfAwareRankingMetrics
 
 
@@ -68,10 +68,11 @@ def get_distance_metrics(split_df: pd.DataFrame, environ: Environment):
     non_negative_sampled_df = split_df[split_df[NEG_FLAG_COL] == 0] #We don't actually know the true score for the negative samples since they are non-observed items.
     y_true = non_negative_sampled_df[environ.dataset_info.relevance_col].values
     y_pred = non_negative_sampled_df[environ.dataset_info.r_pred_col].values
-    #mae_score = mae(y_true, y_pred)
+    mae_score = mae(y_true, y_pred)
     rmse_score = rmse(y_true, y_pred)
 
     return {
         "rmse": rmse_score,
+        "mae": mae_score
     }
 
