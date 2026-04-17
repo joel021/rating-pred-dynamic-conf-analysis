@@ -42,4 +42,3 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device)
             export_history(environ, history, "ranking")
 
     return model
-export_history

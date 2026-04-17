@@ -81,9 +81,9 @@ class SparseKNNRecommender():
         self.chunk_size = chunk_size
 
         # --- Build matrix ---
-        u_ids = torch.from_numpy(train_df[user_col].values, dtype=torch.long)
-        i_ids = torch.from_numpy(train_df[item_col].values, dtype=torch.long)
-        vals = torch.from_numpy(train_df[rating_col].values, dtype=torch.float32)
+        u_ids = torch.tensor(train_df[user_col].values, dtype=torch.long)
+        i_ids = torch.tensor(train_df[item_col].values, dtype=torch.long)
+        vals = torch.tensor(train_df[rating_col].values, dtype=torch.float32)
 
         indices = torch.stack([u_ids, i_ids])
         self.R = torch.sparse_coo_tensor(
@@ -139,6 +139,7 @@ class SparseKNNRecommender():
             Xn = X / (norms + 1e-9)
             return Xn @ Xn.T
 
+
     def _pairwise_msd(self):
         X = self.R_dense
         mask = (X > 0).float()
@@ -162,6 +163,9 @@ class SparseKNNRecommender():
 
         return sim
 
+    # ---------------------------------------------------
+    # ⚠️ Chunked Pearson baseline
+    # ---------------------------------------------------
     def _pairwise_pearson_baseline(self):
         X = self.R_dense
         mask = (X > 0).float()
