@@ -69,7 +69,7 @@ class SparseKNNRecommender():
         estimator="baseline",
         shrinkage=100,
         device="cpu",
-        chunk_size=1024):
+        chunk_size=512):
 
         self.estimator = estimator
         self.n_users = n_users
@@ -80,10 +80,9 @@ class SparseKNNRecommender():
         self.device = device
         self.chunk_size = chunk_size
 
-        # --- Build matrix ---
-        u_ids = torch.from_numpy(train_df[user_col].values, dtype=torch.long)
-        i_ids = torch.from_numpy(train_df[item_col].values, dtype=torch.long)
-        vals = torch.from_numpy(train_df[rating_col].values, dtype=torch.float32)
+        u_ids = torch.from_numpy(train_df[user_col].values).int()
+        i_ids = torch.from_numpy(train_df[item_col].values).int()
+        vals = torch.from_numpy(train_df[rating_col].values).float()
 
         indices = torch.stack([u_ids, i_ids])
         self.R = torch.sparse_coo_tensor(
@@ -92,7 +91,6 @@ class SparseKNNRecommender():
 
         self.R_dense = self.R.to_dense()
 
-        # --- Stats ---
         self.global_mean = vals.mean()
 
         user_counts = (self.R_dense > 0).sum(dim=1)
@@ -106,13 +104,10 @@ class SparseKNNRecommender():
         item_sums = self.R_dense.sum(dim=0)
         self.item_means = item_sums / (item_counts + 1e-9)
 
-        # --- Precompute similarity ---
         self.sim = self._compute_similarity_matrix()
 
-        # remove self similarity
         self.sim.fill_diagonal_(0)
 
-        # --- TopK ---
         self.topk_sim, self.topk_idx = torch.topk(self.sim, k=self.k, dim=1)
 
     def _compute_similarity_matrix(self):
@@ -152,7 +147,6 @@ class SparseKNNRecommender():
             Xi = X[start:end]              # (C, I)
             Mi = mask[start:end]
 
-            # broadcast
             diff = Xi.unsqueeze(1) - X.unsqueeze(0)      # (C, N, I)
             common = Mi.unsqueeze(1) * mask.unsqueeze(0)
 
@@ -247,13 +241,9 @@ class SparseKNNRecommender():
 
             pred = b_ui + (sims * (ratings - b_vi)).sum(dim=1) / sim_sum
 
-        # ---------------------------------------------------
-        # Fallbacks
-        # ---------------------------------------------------
         user_mean = self.user_means[u_ids]
         pred = torch.where(sim_sum < 1e-8, user_mean, pred)
 
-        # Certainty
         std = torch.std(ratings, dim=1, unbiased=False)
         certainty = 1.0 / (std + 1.0)
 
