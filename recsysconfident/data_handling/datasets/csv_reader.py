@@ -21,3 +21,7 @@ class CsvReader:
         df = pd.read_csv(ratings_uri, header=None, sep=self.info.sep)
         df.columns = self.info.columns
         return df
+
+    def read_items(self):
+        file_uri = f"{self.info.root_uri}/data/{self.info.database_name}/{self.info.items_file}"
+        return pd.read_csv(file_uri)

@@ -1,4 +1,6 @@
 import json
+import shutil
+import os
 
 from torch import optim
 
@@ -35,8 +37,7 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device)
 
         if hasattr(model, 'switch_to_ranking') and (hasattr(model, 'ranking_loss') or hasattr(model, 'fit_ranking_loss')):
             print(f"Model probs trained. Switching to ranking training.")
-            import shutil
-            import os
+
             if os.path.exists(environ.model_uri):
                 shutil.copy(environ.model_uri, environ.model_uri.replace('.pth', '-rating.pth'))
                 print(f"Preserved rating weights to {environ.model_uri.replace('.pth', '-rating.pth')}")

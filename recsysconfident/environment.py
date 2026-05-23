@@ -97,12 +97,16 @@ class Environment:
         ratings_df = self.database_name_fn[self.database_name]()
         items_df = None
         if self.dataset_info.metadata_columns:
-            items_df = CsvReader(self.dataset_info).read_items()
+            items_path = f"{self.dataset_info.root_uri}/data/{self.dataset_info.database_name}/{self.dataset_info.items_file}" if self.dataset_info.items_file else None
+            if items_path and os.path.exists(items_path):
+                items_df = CsvReader(self.dataset_info).read_items()
 
-            not_data_items = set(ratings_df[self.dataset_info.item_col].unique()) - set(
-                items_df[self.dataset_info.item_col].unique())
-            if len(not_data_items) > 0:
-                print(f"Warning: {len(not_data_items)} items in ratings are missing from items_df metadata.")
+                not_data_items = set(ratings_df[self.dataset_info.item_col].unique()) - set(
+                    items_df[self.dataset_info.item_col].unique())
+                if len(not_data_items) > 0:
+                    print(f"Warning: {len(not_data_items)} items in ratings are missing from items_df metadata.")
+            else:
+                items_df = None
 
         self.dataset_info.build(ratings_df, items_df, shuffle)
         print(f"Gathered dataset with {len(self.dataset_info.ratings_df)} interactions, {self.dataset_info.n_users} users"
