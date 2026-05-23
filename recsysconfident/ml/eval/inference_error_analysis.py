@@ -62,7 +62,6 @@ def inference(model: TorchModel, split_df: pd.DataFrame, environ: Environment, d
     rt = RELEVANCE_RATIO * rmax
     split_df[relevance_col] = split_df[relevance_col].astype(float)
     split_df = keep_users_any_r_higher_than(split_df, user_col, relevance_col, rt)
-    split_df = filter_out_users_less_than_k_inter(split_df, user_col, 10)
     split_df = append_neg_samples(split_df, environ, rmin)
 
     dataloader = DataLoader(

@@ -9,17 +9,12 @@ class CsvReader:
         self.info = dataset_info
 
     def read(self):
-
         file_uri = f"{self.info.root_uri}/data/{self.info.database_name}/{self.info.interactions_file}"
-        if not ".csv" in file_uri or not self.info.has_head:
-            return self.read_with_dynamic_cols(file_uri)
-        else:
-            return pd.read_csv(file_uri)
-
-    def read_with_dynamic_cols(self, ratings_uri: str):
-
-        df = pd.read_csv(ratings_uri, header=None, sep=self.info.sep)
-        df.columns = self.info.columns
+        header = 0 if self.info.has_head else None
+        
+        df = pd.read_csv(file_uri, sep=self.info.sep, header=header)
+        if not self.info.has_head:
+            df.columns = self.info.columns
         return df
 
     def read_items(self):

@@ -12,7 +12,7 @@ from main import main
 class TestMainFlow(unittest.TestCase):
 
     def setUp(self):
-        self.db_name = "ml-100k"
+        self.db_name = "ml-100k-test"
         self.model_name = "mf"
         
         # Clean up existing runs/data

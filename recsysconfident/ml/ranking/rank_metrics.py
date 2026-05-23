@@ -3,14 +3,15 @@ package: recsysconfident.ml.ranking.conf_aware_rank_metrics
 """
 import numpy as np
 import pandas as pd
-from sklearn.metrics import ndcg_score, average_precision_score, recall_score
+from sklearn.metrics import ndcg_score
 
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
+from recsysconfident.constants import RELEVANCE_RATIO
 
 
 class ConfAwareRankingMetrics:
 
-    def __init__(self, data_info: DatasetInfo, r_t: float=0.75, alpha: float = 5):
+    def __init__(self, data_info: DatasetInfo, r_t: float = RELEVANCE_RATIO, alpha: float = 5):
         self.data_info = data_info
         self.r_t = r_t
         self.alpha = alpha
@@ -37,8 +38,6 @@ class ConfAwareRankingMetrics:
         return df
 
     def rank_metrics(self, norm_df: pd.DataFrame, k: int, conf_threshold: float = -1) -> list:
-        from sklearn.metrics import precision_score
-        
         if conf_threshold >= 0:
             norm_df = self.conf_filter(norm_df, conf_threshold)
 
@@ -46,7 +45,6 @@ class ConfAwareRankingMetrics:
         metrics = []
         for user_key in user_true_pred_scores.keys():
             true_ratings, pred_ratings = user_true_pred_scores[user_key]
-            binary_pred = self.binarize(pred_ratings)
             binary_true = self.binarize(true_ratings)
             
             # NDCG
@@ -55,23 +53,33 @@ class ConfAwareRankingMetrics:
             except Exception:
                 ndcg = 0.0
 
-            # MAP
+            # MAP (Average Precision at K)
             try:
-                ap = average_precision_score(binary_true[:k], binary_pred[:k])
-                if np.isnan(ap):
+                total_relevant = np.sum(binary_true)
+                if total_relevant == 0:
                     ap = 0.0
+                else:
+                    ap = 0.0
+                    num_pos = 0
+                    for i in range(1, min(k, len(binary_true)) + 1):
+                        if binary_true[i - 1] == 1:
+                            num_pos += 1
+                            ap += num_pos / i
+                    ap /= min(total_relevant, k)
             except Exception:
                 ap = 0.0
 
-            # Precision
+            # Precision@K
             try:
-                precision = precision_score(binary_true[:k], binary_pred[:k], zero_division=0)
+                sliced_len = len(binary_true[:k])
+                precision = np.sum(binary_true[:k]) / sliced_len if sliced_len > 0 else 0.0
             except Exception:
                 precision = 0.0
 
-            # Recall
+            # Recall@K
             try:
-                recall = recall_score(binary_true[:k], binary_pred[:k], zero_division=0)
+                total_relevant = np.sum(binary_true)
+                recall = np.sum(binary_true[:k]) / total_relevant if total_relevant > 0 else 0.0
             except Exception:
                 recall = 0.0
 

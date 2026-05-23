@@ -13,9 +13,9 @@ class TestRankMetrics(unittest.TestCase):
         self.df = pd.DataFrame({
             "userId": [1, 1, 1, 1, 1],
             "itemId": [1, 2, 3, 4, 5],
-            "rating": np.asarray([5, 1, 1, 1, 5]),
-            "r_pred": np.asarray([.3, .2, 2, 2.5, 4]),
-            "conf_pred": [1, 0.4, 0.5, 0.6, 0.1]
+            "rating": np.asarray([1.0, 0.0, 0.0, 0.0, 1.0]),
+            "r_pred": np.asarray([0.1, 0.05, 0.5, 0.6, 0.9]),
+            "conf_pred": [1.0, 0.4, 0.5, 0.6, 0.1]
         }).sort_values(by="r_pred")
         data_info = DatasetInfo(user_col="userId",
                                 item_col="itemId",
@@ -55,3 +55,10 @@ class TestRankMetrics(unittest.TestCase):
 
         filtered_df = self.rank_metrics.conf_filter(self.df, 0.5)
         print(filtered_df)
+
+    def test_metric_values(self):
+        users_scores = self.rank_metrics.rank_metrics(self.df, 3, -1)
+        ndcg, ap, precision, recall = users_scores[0]
+        self.assertAlmostEqual(precision, 1.0 / 3.0)
+        self.assertAlmostEqual(recall, 0.5)
+        self.assertAlmostEqual(ap, 0.5)

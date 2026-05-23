@@ -77,6 +77,7 @@ class Environment:
             "amazon-movies-tvs": AmazonProductsReader(self.dataset_info).read,
             "netflix-prize": CsvReader(self.dataset_info).read,
             "ml-100k": CsvReader(self.dataset_info).read,
+            "ml-100k-test": CsvReader(self.dataset_info).read,
         }
 
         self.model_name_fn = {
