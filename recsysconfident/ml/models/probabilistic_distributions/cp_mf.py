@@ -33,6 +33,9 @@ class CPMF(TorchModel):
         # Latent factors
         self.user_factors = nn.Embedding(num_users, latent_dim)
         self.item_factors = nn.Embedding(num_items, latent_dim)
+        self.user_bias = nn.Embedding(num_users, 1)
+        self.item_bias = nn.Embedding(num_items, 1)
+        self.global_bias = nn.Parameter(torch.tensor((self.rmin + self.rmax) / 2))
 
         # Variance parameters (γ_u, γ_v), initialized to 1.0
         self.user_gamma = nn.Embedding(num_users, 1)
@@ -42,8 +45,15 @@ class CPMF(TorchModel):
 
         self.alpha = nn.Parameter(torch.tensor(1.))
 
-        self.lambda_u = 0
-        self.lambda_v = 0
+        # Regularization coefficients
+        self.lambda_u = 0.001
+        self.lambda_v = 0.001
+
+        # Initialize factor and bias weights
+        nn.init.xavier_uniform_(self.user_factors.weight)
+        nn.init.xavier_uniform_(self.item_factors.weight)
+        nn.init.zeros_(self.user_bias.weight)
+        nn.init.zeros_(self.item_bias.weight)
 
         self.switch_to_rating()
 
@@ -52,27 +62,27 @@ class CPMF(TorchModel):
         v = self.item_factors(item_ids)  # (batch, k)
         dot = torch.sum(u * v, dim=1, keepdim=True)
 
-        #bias = self.user_bias(user_ids) + self.item_bias(item_ids) + self.global_bias
-        mean = dot.squeeze()  # predicted rating mean (batch, 1)
+        user_bias = self.user_bias(user_ids)
+        item_bias = self.item_bias(item_ids)
+        mean = (dot + user_bias + item_bias + self.global_bias).squeeze()
 
         # Softplus ensures γ > 0
-        gamma_u = torch.clamp(self.user_gamma(user_ids), min=0.00001) #the article does not mention, but it does not work without.
+        gamma_u = torch.clamp(self.user_gamma(user_ids), min=0.00001)
         gamma_v = torch.clamp(self.item_gamma(item_ids), min=0.00001)
         alpha = torch.exp(self.alpha)
 
         precision = alpha * gamma_u * gamma_v
         variance = 1.0 / precision
-        std = torch.sqrt(variance).squeeze() #=> precision = 1/(std * std) = 1/var
+        std = torch.sqrt(variance).squeeze()
 
         return torch.stack([mean, std], dim=1)
 
     def loss(self, user_ids, item_ids, labels, optimizer):
         optimizer.zero_grad()
         pred_scores = self.forward(user_ids, item_ids)
-        true_scores_norm = (labels - self.rmin) / (self.rmax - self.rmin)
         mu = pred_scores[:, 0]
         sigma = pred_scores[:, 1]
-        nll = -d.Normal(mu, sigma).log_prob(true_scores_norm).mean()
+        nll = -d.Normal(mu, sigma).log_prob(labels).mean()
 
         loss = nll + self.regularization()
         loss.backward()
@@ -82,17 +92,16 @@ class CPMF(TorchModel):
     def eval_loss(self, user_ids, item_ids, labels):
         pred_scores = self.forward(user_ids, item_ids)
         mu = pred_scores[:, 0]
-        rating = mu * (self.rmax - self.rmin) + self.rmin
-        return torch.sqrt(torch.nn.functional.mse_loss(labels, rating, reduction='mean'))
+        return torch.sqrt(torch.nn.functional.mse_loss(labels, mu, reduction='mean'))
 
     def regularization(self, user_ids=None, item_ids=None):
         reg = 0.0
 
-        # L2 regularization on all user factors (as defined by Gaussian priors in PMF)
+        # L2 regularization on user and item factors/biases
         reg += self.lambda_u * torch.sum(self.user_factors.weight ** 2)
-
-        # L2 regularization on all item factors (as defined by Gaussian priors in PMF)
         reg += self.lambda_v * torch.sum(self.item_factors.weight ** 2)
+        reg += 0.01 * torch.sum(self.user_bias.weight ** 2)
+        reg += 0.01 * torch.sum(self.item_bias.weight ** 2)
 
         return reg
 
@@ -100,16 +109,14 @@ class CPMF(TorchModel):
         return (R - 0.7 * self.rmax) / (sigma + 0.00001)
 
     def raking_predict(self, user_ids, item_ids):
-
         scores = self.forward(user_ids, item_ids)
 
         mu = scores[:, 0]
         sigma = scores[:, 1]
-        dist = d.Normal(scores[:, 0], sigma)
+        dist = d.Normal(mu, sigma)
 
-        R = mu * (self.rmax - self.rmin) + self.rmin
         confidence = dist.cdf(mu + self.delta_r) - dist.cdf(mu - self.delta_r)
-        score = self.sharpe_ratio(R, sigma)
+        score = self.sharpe_ratio(mu, sigma)
 
         return score, confidence
 
@@ -118,12 +125,11 @@ class CPMF(TorchModel):
 
         mu = scores[:, 0]
         sigma = scores[:, 1]
-        dist = d.Normal(scores[:, 0], sigma)
+        dist = d.Normal(mu, sigma)
 
-        R = mu * (self.rmax - self.rmin) + self.rmin
         confidence = dist.cdf(mu + self.delta_r) - dist.cdf(mu - self.delta_r)
 
-        return R, confidence
+        return mu, confidence
 
     def switch_to_ranking(self):
         self.predict = self.raking_predict
