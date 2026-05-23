@@ -4,6 +4,6 @@
       "model_name": "lbd",
       "batch_size": 1024,
       "min_inter_per_user": 10,
-      "folds": 2
+      "folds": 7
     }
 }

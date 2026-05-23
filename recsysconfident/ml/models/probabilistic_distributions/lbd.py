@@ -56,7 +56,7 @@ class LBD(TorchModel):
         self.bin_a = nn.Embedding(num_users + 1, n_ratings)
         self.bin_b = nn.Embedding(num_items + 1, n_ratings)
 
-        self.epslon = torch.scalar_tensor(0.0001)
+        self.epslon = torch.scalar_tensor(0.001)
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -87,11 +87,11 @@ class LBD(TorchModel):
 
         theta_u = self.bin_a(u_ids)
         theta_i = self.bin_b(i_ids)
-        w_ij_r = torch.exp(theta_u + theta_i)
+        w_logits = theta_u + theta_i
 
         mu_conf = torch.stack([mu, nu, alpha_prime, beta_prime], dim=1)
 
-        return mu_conf, w_ij_r
+        return mu_conf, w_logits
 
     def regularization(self):
         U_l2 = torch.norm(self.uid_features.weight, p=2) ** 2
@@ -104,11 +104,11 @@ class LBD(TorchModel):
         return (U_l2 + V_l2 + a_l2 + b_l2 + bin_a_l2 + bin_b_l2) * 0.0001
 
     def get_pmf(self, user_ids, item_ids):
-        outputs, w_ij_r = self.forward(user_ids, item_ids)
-        alpha = outputs[:, 2]
-        beta = outputs[:, 3]
+        outputs, w_logits = self.forward(user_ids, item_ids)
+        alpha = torch.clamp(outputs[:, 2], min=self.epslon, max=10000.0)
+        beta = torch.clamp(outputs[:, 3], min=self.epslon, max=10000.0)
 
-        W_ij_r = w_ij_r / torch.sum(w_ij_r, dim=1, keepdim=True)
+        W_ij_r = torch.softmax(w_logits, dim=-1)
 
         zero_edge = torch.zeros_like(W_ij_r[:, :1])
         normalized_edges = torch.cat(

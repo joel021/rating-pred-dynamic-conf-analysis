@@ -1,4 +1,5 @@
 from threading import Thread
+import math
 
 import torch
 import numpy as np
@@ -24,18 +25,29 @@ class EarlyStopping:
         self.path = path
 
     def stop(self, val_loss, model) -> bool:
-        score = -val_loss
+        try:
+            val_loss_float = float(val_loss)
+        except (ValueError, TypeError):
+            val_loss_float = float('nan')
+
+        if math.isnan(val_loss_float):
+            self.counter += 1
+            if self.verbose:
+                print(f'Warning: Validation loss is NaN. EarlyStopping counter: {self.counter} out of {self.patience}')
+            return self.counter >= self.patience
+
+        score = -val_loss_float
 
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss_float, model)
         elif score <= self.best_score:
             self.counter += 1
             if self.verbose:
                 print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
         else:
             self.best_score = score
-            self.save_checkpoint(val_loss, model)
+            self.save_checkpoint(val_loss_float, model)
             self.counter = 0
 
         return self.counter >= self.patience
