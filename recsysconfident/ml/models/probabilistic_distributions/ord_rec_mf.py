@@ -201,11 +201,12 @@ class OrdRec(TorchModel):
         return total_loss
 
     def regularization(self):
-        """L2 regularization for all parameters"""
-        l2_reg = 0.0
-        for param in self.parameters():
-            l2_reg += torch.norm(param, p=2) ** 2
-        return l2_reg
+        """L2 regularization for SVD++ parameters only"""
+        P_l2 = torch.norm(self.P.weight, p=2) ** 2
+        Q_l2 = torch.norm(self.Q.weight, p=2) ** 2
+        bias_l2 = torch.norm(self.item_bias.weight, p=2) ** 2
+        yj_l2 = torch.norm(self.y_j.weight, p=2) ** 2
+        return P_l2 + Q_l2 + bias_l2 + yj_l2
 
     def predict_rank_scores(self, user_ids, item_ids):
         probs = self.predict_proba(user_ids, item_ids)
@@ -239,13 +240,13 @@ class OrdRec(TorchModel):
         return self._pred_ratings_confidence(probs)
 
     def freeze_ranking_weights(self):
-        """Freeze everything except ranking weights"""
-        for param in self.parameters():
-            param.requires_grad = False
-        self.ranking_weights.requires_grad = True
-
-    def freeze_all_except_ranking(self):
-        """Freeze ranking weights only"""
+        """Freeze ranking weights only (rating stage)"""
         for param in self.parameters():
             param.requires_grad = True
         self.ranking_weights.requires_grad = False
+
+    def freeze_all_except_ranking(self):
+        """Freeze everything except ranking weights (ranking stage)"""
+        for param in self.parameters():
+            param.requires_grad = False
+        self.ranking_weights.requires_grad = True

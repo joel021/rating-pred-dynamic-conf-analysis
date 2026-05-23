@@ -211,13 +211,13 @@ class CPOrdrecGAT(TorchModel):
         return scores, confidence
 
     def freeze_ranking_weights(self):
-        """Freeze everything except ranking weights"""
+        """Freeze ranking weights only (rating stage)"""
         for param in self.parameters():
             param.requires_grad = True
         self.ranking_weights.requires_grad = False
 
     def freeze_all_except_ranking(self):
-        """Freeze ranking weights only"""
+        """Freeze everything except ranking weights (ranking stage)"""
         for param in self.parameters():
             param.requires_grad = False
         self.ranking_weights.requires_grad = True
