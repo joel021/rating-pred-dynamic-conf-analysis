@@ -23,7 +23,9 @@ class TestRankMetrics(unittest.TestCase):
                                 interactions_file="ratings.csv",
                                 columns=["userId","itemId", "rating","conf_pred"],
                                 rate_range=[1,5],
-                                database_name="ml-1m")
+                                database_name="ml-1m",
+                                run_data_uri="./runs/data/ml-1m",
+                                metadata_columns=None)
         self.rank_metrics = ConfAwareRankingMetrics(data_info)
 
     def test_rank_metrics_at_k_conf(self):

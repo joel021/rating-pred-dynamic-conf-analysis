@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from recsysconfident.ml.eval.learn_elementwise_loss import sample_unseen_item, get_low_rank_items
+from recsysconfident.ml.ranking.rank_helper import sample_unseen_item, get_low_rank_items
 
 
 class TestElementWiseBPR(unittest.TestCase):

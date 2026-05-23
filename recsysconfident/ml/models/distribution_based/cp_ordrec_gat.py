@@ -10,9 +10,9 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
-def get_cpordrecgat_model_and_dataloader(info: DatasetInfo):
+def get_cpordrecgat_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     model = CPOrdrecGAT(
         n_users=info.n_users,
@@ -23,7 +23,7 @@ def get_cpordrecgat_model_and_dataloader(info: DatasetInfo):
         items_per_user=info.items_per_user
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
 class CPOrdrecGAT(TorchModel):

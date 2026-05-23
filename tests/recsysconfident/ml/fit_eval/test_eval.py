@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from recsysconfident.ml.eval.eval import filter_out_users_less_than_k_inter
+from recsysconfident.data_handling.miscellaneous import filter_out_users_less_than_k_inter
 
 
 class TestEval(unittest.TestCase):

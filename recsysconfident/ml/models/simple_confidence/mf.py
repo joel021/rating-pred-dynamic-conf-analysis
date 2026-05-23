@@ -5,9 +5,9 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.ml.models.simple_confidence.simple_conf_model import SimpleConfModel
 
-def get_mf_model_and_dataloader(info: DatasetInfo):
+def get_mf_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     model = MatrixFactorizationModel(
         num_users=info.n_users,
@@ -17,7 +17,7 @@ def get_mf_model_and_dataloader(info: DatasetInfo):
         rmax=info.rate_range[1]
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
 class MatrixFactorizationModel(SimpleConfModel):

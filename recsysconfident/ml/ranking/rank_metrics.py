@@ -31,7 +31,16 @@ class ConfAwareRankingMetrics:
         )
         return user_true_pred_scores
 
-    def rank_metrics(self, norm_df: pd.DataFrame, k: int) -> list:
+    def conf_filter(self, df: pd.DataFrame, threshold: float) -> pd.DataFrame:
+        if self.data_info.conf_pred_col in df.columns:
+            return df[df[self.data_info.conf_pred_col] >= threshold]
+        return df
+
+    def rank_metrics(self, norm_df: pd.DataFrame, k: int, conf_threshold: float = -1) -> list:
+        from sklearn.metrics import precision_score
+        
+        if conf_threshold >= 0:
+            norm_df = self.conf_filter(norm_df, conf_threshold)
 
         user_true_pred_scores = self._get_true_pred_scores(norm_df)
         metrics = []
@@ -39,14 +48,40 @@ class ConfAwareRankingMetrics:
             true_ratings, pred_ratings = user_true_pred_scores[user_key]
             binary_pred = self.binarize(pred_ratings)
             binary_true = self.binarize(true_ratings)
-            metrics.append([
-                ndcg_score([true_ratings], [pred_ratings], k=k),
-                average_precision_score(binary_true[:k], binary_pred[:k]),
-            ])
+            
+            # NDCG
+            try:
+                ndcg = ndcg_score([true_ratings], [pred_ratings], k=k)
+            except Exception:
+                ndcg = 0.0
+
+            # MAP
+            try:
+                ap = average_precision_score(binary_true[:k], binary_pred[:k])
+                if np.isnan(ap):
+                    ap = 0.0
+            except Exception:
+                ap = 0.0
+
+            # Precision
+            try:
+                precision = precision_score(binary_true[:k], binary_pred[:k], zero_division=0)
+            except Exception:
+                precision = 0.0
+
+            # Recall
+            try:
+                recall = recall_score(binary_true[:k], binary_pred[:k], zero_division=0)
+            except Exception:
+                recall = 0.0
+
+            metrics.append([ndcg, ap, precision, recall])
         return metrics
 
-    def users_mean_std_rank_metrics(self, candidates_norm_df: pd.DataFrame, k: int) -> tuple:
-        users_scores = self.rank_metrics(candidates_norm_df, k)
+    def users_mean_std_rank_metrics(self, candidates_norm_df: pd.DataFrame, k: int, conf_threshold: float = -1) -> tuple:
+        users_scores = self.rank_metrics(candidates_norm_df, k, conf_threshold)
+        if not users_scores:
+            return np.zeros(4), np.zeros(4)
         scores = np.array(users_scores)
 
         mean_metrics = np.mean(scores, axis=0)

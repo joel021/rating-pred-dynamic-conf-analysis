@@ -20,7 +20,11 @@ def setup_model_results_exists(run_folder: str):
 def setup_and_model_exists(run_folder: str):
 
     existent_setups = glob.glob(f"{run_folder}/setup-[0-9]*.json" )
-    return len(existent_setups) > 0
+    is_knn = "knn" in run_folder.lower()
+    if is_knn:
+        return len(existent_setups) > 0
+    existent_models = glob.glob(f"{run_folder}/model-[0-9]*.pth")
+    return len(existent_setups) > 0 and len(existent_models) > 0
 
 def scan_folder_for_files(root_folder: str, start_with:str= "ranking", end_with: str= ".json") -> dict:
     """

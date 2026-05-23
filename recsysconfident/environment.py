@@ -12,6 +12,9 @@ from recsysconfident.data_handling.datasets.movie_lens_reader import MovieLensRe
 from recsysconfident.ml.models.distribution_based.lightgcn_conf import get_lightgcn_conf_model_and_dataloader
 from recsysconfident.ml.models.distribution_based.cp_mf import get_cpmf_model_and_dataloader
 from recsysconfident.ml.models.k_nearest_neighbors import get_knn_cosine_basic, get_knn_pearson_baseline_basic
+from recsysconfident.ml.models.distribution_based.ord_rec_mf import get_ordrec_model_and_dataloader
+from recsysconfident.ml.models.distribution_based.cp_ordrec_gat import get_cpordrecgat_model_and_dataloader
+from recsysconfident.ml.models.simple_confidence.mf import get_mf_model_and_dataloader
 
 
 class Environment:
@@ -21,7 +24,8 @@ class Environment:
                  split_position,
                  batch_size: int = 1024,
                  root_path:str="./",
-                 min_inter_per_user: int=10):
+                 min_inter_per_user: int=10,
+                 folds: int = 7):
         self.work_dir: str = None
         self.dataset_info: DatasetInfo = None
         self.batch_size = batch_size
@@ -31,6 +35,7 @@ class Environment:
         self.min_inter_per_user = min_inter_per_user
         self.instance_dir = None
         self.split_position = split_position
+        self.folds = folds
         
         self.setup_instance_dir(None)
 
@@ -59,8 +64,9 @@ class Environment:
             run_data_uri = f"{self.root_path}/runs/data/{self.database_name}"
             os.makedirs(name=run_data_uri, exist_ok=True)
             self.dataset_info = DatasetInfo(**info, run_data_uri=run_data_uri,
-                                            database_name=self.database_name, 
-                                            batch_size=self.batch_size, root_uri=self.root_path)
+                                             database_name=self.database_name, 
+                                             batch_size=self.batch_size, root_uri=self.root_path,
+                                             folds=self.folds)
         else:
             raise FileNotFoundError("Info file does not exists. Check if the dataset name is correct.")
 
@@ -70,6 +76,7 @@ class Environment:
             "ml-1m": MovieLensReader(self.dataset_info).read,
             "amazon-movies-tvs": AmazonProductsReader(self.dataset_info).read,
             "netflix-prize": CsvReader(self.dataset_info).read,
+            "ml-100k": CsvReader(self.dataset_info).read,
         }
 
         self.model_name_fn = {
@@ -77,7 +84,11 @@ class Environment:
             "cpmf": get_cpmf_model_and_dataloader,
             "prlightgcn": get_lightgcn_conf_model_and_dataloader,
             "knn-cosine-basic": get_knn_cosine_basic,
-            "knn-pearson-baseline": get_knn_pearson_baseline_basic
+            "knn-pearson-baseline": get_knn_pearson_baseline_basic,
+            "cgprank": get_cgprank_and_dataloader,
+            "ordrec": get_ordrec_model_and_dataloader,
+            "cpordrecgat": get_cpordrecgat_model_and_dataloader,
+            "mf": get_mf_model_and_dataloader
         }
 
         if not self.database_name in self.database_name_fn:

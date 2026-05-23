@@ -117,6 +117,12 @@ class DatasetInfo:
         )
         return user_item_dict
 
+    def get_user_item_sets(self, df: DataFrame) -> Dict:
+        """
+        Public wrapper for _get_user_item_sets.
+        """
+        return self._get_user_item_sets(df)
+
     # --- Public Accessors/Getters ---
 
     def get_splits(self) -> List[DataFrame]:

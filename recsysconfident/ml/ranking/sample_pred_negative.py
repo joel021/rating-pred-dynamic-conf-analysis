@@ -28,7 +28,10 @@ class SamplePredNegatives:
             self.data_info.user_col: users_ids,
             self.data_info.item_col: items_ids
         })
-        neg_df.loc[:, self.data_info.relevance_col] = rmin
+        if neg_df.empty:
+            neg_df[self.data_info.relevance_col] = pd.Series(dtype=float)
+        else:
+            neg_df.loc[:, self.data_info.relevance_col] = rmin
         return neg_df
 
     def _candidate_dict_to_lists(self, candidates_per_user: dict) -> (list, list):

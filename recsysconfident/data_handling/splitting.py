@@ -62,3 +62,57 @@ def time_ordered_folds(
         start = end
 
     return folds
+
+
+def split_ratings(
+    df: pd.DataFrame,
+    user_col: str,
+    item_col: str,
+    timestamp_col: str,
+    fit_ratio: float = 0.75,
+    shuffle: bool = False,
+    random_state: int | None = None
+):
+    """
+    Split ratings into fit and test sets ensuring:
+    - Min 2 interactions per user in fit_df
+    - All users and items in test_df are present in fit_df
+    """
+    user_counts = df[user_col].value_counts()
+    valid_users = user_counts[user_counts >= 2].index
+    df = df[df[user_col].isin(valid_users)].copy()
+
+    if shuffle:
+        rng = np.random.default_rng(random_state)
+        df = df.sample(frac=1, random_state=rng.integers(1e9) if random_state is None else random_state).reset_index(drop=True)
+    else:
+        df = df.sort_values(timestamp_col).reset_index(drop=True)
+
+    fit_indices = []
+    test_indices = []
+
+    for u, group in df.groupby(user_col):
+        group_indices = group.index.tolist()
+        n_group = len(group_indices)
+        n_fit = max(2, int(n_group * fit_ratio))
+        if n_fit >= n_group:
+            fit_indices.extend(group_indices)
+        else:
+            fit_indices.extend(group_indices[:n_fit])
+            test_indices.extend(group_indices[n_fit:])
+
+    fit_df = df.loc[fit_indices].copy()
+    fit_items = set(fit_df[item_col].unique())
+
+    final_test_indices = []
+    for idx in test_indices:
+        item = df.at[idx, item_col]
+        if item in fit_items:
+            final_test_indices.append(idx)
+        else:
+            fit_indices.append(idx)
+
+    fit_df = df.loc[fit_indices].copy()
+    test_df = df.loc[final_test_indices].copy()
+
+    return fit_df.reset_index(drop=True), test_df.reset_index(drop=True)

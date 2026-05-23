@@ -16,13 +16,16 @@ class TestSamplePredNegatives(unittest.TestCase):
         }
         self.df = pd.DataFrame(data)
         self.datainfo = DatasetInfo('userId', 'itemId', 'rating', "./interactions.csv",
-                              ['userId', 'itemId'], [1, 5], 'ml-1m')
+                              ['userId', 'itemId'], [1, 5], 'ml-1m',
+                              run_data_uri="./runs/data/ml-1m",
+                              metadata_columns=None)
         self.items_per_user = self.datainfo.get_user_item_sets(self.df)
 
         n_items = 10  # Total number of items
+        self.datainfo.n_items = n_items
         num_negatives = 4  # Number of negative samples.  Changed to 2 for easier verification
 
-        self.rank_generator = SamplePredNegatives(self.datainfo, n_items, num_negatives)
+        self.rank_generator = SamplePredNegatives(self.datainfo, num_negatives)
 
     def test_sample_negative_candidates_sets(self):
 

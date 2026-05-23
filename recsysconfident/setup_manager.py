@@ -33,8 +33,14 @@ def setup_fit(setup: Setup, model, fit_dl, val_dl, environ: Environment, device)
                               optimizer=optimizer, epochs=100, device=device, patience=setup.patience)
         export_history(environ, history, "")
 
-        if hasattr(model, 'switch_to_ranking') and hasattr(model, 'ranking_loss'):
+        if hasattr(model, 'switch_to_ranking') and (hasattr(model, 'ranking_loss') or hasattr(model, 'fit_ranking_loss')):
             print(f"Model probs trained. Switching to ranking training.")
+            import shutil
+            import os
+            if os.path.exists(environ.model_uri):
+                shutil.copy(environ.model_uri, environ.model_uri.replace('.pth', '-rating.pth'))
+                print(f"Preserved rating weights to {environ.model_uri.replace('.pth', '-rating.pth')}")
+            
             model.switch_to_ranking()
             history = train_model(model, training_loader=fit_dl, validation_loader=val_dl, environ=environ,
                                   optimizer=optimizer, epochs=100, device=device, patience=setup.patience)
