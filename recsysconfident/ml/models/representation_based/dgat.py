@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
-from recsysconfident.ml.models.simple_confidence.simple_conf_model import SimpleConfModel
+from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 
 def get_dgat_model_and_dataloader(info: DatasetInfo):

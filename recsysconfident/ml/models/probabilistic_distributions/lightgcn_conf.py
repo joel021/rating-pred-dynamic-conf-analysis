@@ -3,16 +3,17 @@ Using implementation found in https://github.com/gusye1234/LightGCN-PyTorch/blob
 """
 from torch import nn
 import torch
+import torch.distributions as d
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, scipy_to_torch_sparse
-from recsysconfident.ml.models.simple_confidence.simple_conf_model import SimpleConfModel
+from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 
-def get_lightgcn_model_and_dataloader(info: DatasetInfo):
+def get_lightgcn_conf_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     adj = get_adj_matrix(info.ratings_df, info)
     norm_adj = normalize_adj(adj)
@@ -21,19 +22,21 @@ def get_lightgcn_model_and_dataloader(info: DatasetInfo):
     model = LightGCN(
                 Graph,
                 info.n_users,
-                 info.n_items,
+                info.n_items,
                  64,
                  3,
                  keep_prob=0.6,
                  A_split=False,
                  rmin=info.rate_range[0],
-                 rmax=info.rate_range[1])
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+                 rmax=info.rate_range[1],
+                 step=info.rate_range[2])
+    return model, fit_dataloader, eval_dataloader
 
 class LightGCN(SimpleConfModel):
 
-    def __init__(self, Graph, n_users, n_items, emb_dim, n_layers, keep_prob: float, A_split, rmin, rmax, dropout=True):
+    def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin:float, rmax:float, step: float, dropout=True):
         super(LightGCN, self).__init__()
+        self.delta_r = step/2.0
         self.Graph = Graph
         self.rmax = rmax
         self.rmin = rmin
@@ -45,7 +48,8 @@ class LightGCN(SimpleConfModel):
         self.A_split = A_split
         self.dropout = dropout
         self.__init_weight()
-        self.criterion = nn.MSELoss()
+        self.mse_loss = nn.MSELoss()
+
         print("Light GCN instantiated")
 
     def __init_weight(self):
@@ -56,6 +60,15 @@ class LightGCN(SimpleConfModel):
             num_embeddings=self.num_items, embedding_dim=self.latent_dim)
         nn.init.normal_(self.embedding_user.weight, std=0.1)
         nn.init.normal_(self.embedding_item.weight, std=0.1)
+        #        self.Graph = self.dataset.getSparseGraph()
+
+        # Variance parameters (γ_u, γ_v), initialized to 1.0
+        self.user_gamma = nn.Embedding(self.num_users, 1)
+        self.item_gamma = nn.Embedding(self.num_items, 1)
+        nn.init.ones_(self.user_gamma.weight)
+        nn.init.ones_(self.item_gamma.weight)
+
+        self.alpha = nn.Parameter(torch.tensor(1.))
 
     def __dropout_x(self, x, keep_prob):
         size = x.size()
@@ -106,7 +119,6 @@ class LightGCN(SimpleConfModel):
                 all_emb = torch.sparse.mm(g_droped, all_emb)
             embs.append(all_emb)
         embs = torch.stack(embs, dim=1)
-        # print(embs.size())
         light_out = torch.mean(embs, dim=1)
         users, items = torch.split(light_out, [self.num_users, self.num_items])
         return users, items
@@ -129,7 +141,46 @@ class LightGCN(SimpleConfModel):
         items_emb = all_items[items]
         inner_pro = torch.mul(users_emb, items_emb)
         gamma = torch.sum(inner_pro, dim=1)
-        return torch.stack([gamma, torch.zeros_like(gamma)], dim=1)
 
-    def regularization(self):
-        return 0
+        # Softplus ensures γ > 0
+        gamma_u = torch.clamp(self.user_gamma(users), min=0.00001) #the article does not mention, but it does not work without.
+        gamma_v = torch.clamp(self.item_gamma(items), min=0.00001)
+        alpha = torch.exp(self.alpha)
+
+        precision = alpha * gamma_u * gamma_v
+        variance = 1.0 / precision
+        std = torch.sqrt(variance).squeeze() #=> precision = 1/(std * std) = 1/var
+
+        return torch.stack([gamma, std], dim=1)
+
+    def loss(self, user_ids, item_ids, labels, optimizer):
+        optimizer.zero_grad()
+        pred_scores = self.forward(user_ids, item_ids)
+        true_scores_norm = (labels - self.rmin) / (self.rmax - self.rmin)
+        mu = pred_scores[:, 0]
+        sigma = pred_scores[:, 1]
+        nll = -d.Normal(mu, sigma).log_prob(true_scores_norm).mean()
+        mse_loss = self.mse_loss(mu, labels)
+
+        loss = nll + mse_loss * 0.001
+        loss.backward()
+        optimizer.step()
+        return loss
+
+    def eval_loss(self, user_ids, item_ids, labels):
+        pred_scores = self.forward(user_ids, item_ids)
+        mu = pred_scores[:, 0]
+        rating = mu * (self.rmax - self.rmin) + self.rmin
+        return torch.sqrt(torch.nn.functional.mse_loss(labels, rating, reduction='mean'))
+
+    def predict(self, user_ids, item_ids):
+        scores = self.forward(user_ids, item_ids)
+
+        mu = scores[:, 0]
+        sigma = scores[:, 1]
+        dist = d.Normal(scores[:, 0], sigma)
+
+        R = mu * (self.rmax - self.rmin) + self.rmin
+        confidence = dist.cdf(mu + self.delta_r) - dist.cdf(mu - self.delta_r)
+
+        return R, confidence

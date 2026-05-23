@@ -3,21 +3,13 @@ import torch.nn as nn
 
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
-from recsysconfident.ml.models.simple_confidence.simple_conf_model import SimpleConfModel
-from recsysconfident.utils.polynomial import fit_approx_polynomial, get_density, get_y
+from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
+def get_mf_model_and_dataloader(info: DatasetInfo, fold):
 
-def get_distmf_model_and_dataloader(info: DatasetInfo):
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
-
-    poly_dist = fit_approx_polynomial(info.fit_df[info.relevance_col],
-                                       min_value=info.fit_df[info.relevance_col].min(),
-                                       max_value=info.fit_df[info.relevance_col].max(),
-                                       degree=100, bins='auto')
-
-    model = DistMatrixFactorizationModel(
-        poly_dist = poly_dist,
+    model = MatrixFactorizationModel(
         num_users=info.n_users,
         num_items=info.n_items,
         num_factors=64,
@@ -25,15 +17,13 @@ def get_distmf_model_and_dataloader(info: DatasetInfo):
         rmax=info.rate_range[1]
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
-class DistMatrixFactorizationModel(SimpleConfModel):
+class MatrixFactorizationModel(SimpleConfModel):
 
-    def __init__(self, poly_dist, num_users: int, num_items:int, num_factors:int, rmin:float, rmax:float):
-        super(DistMatrixFactorizationModel, self).__init__()
-
-        self.register_buffer('poly_dist', poly_dist)
+    def __init__(self, num_users: int, num_items:int, num_factors:int, rmin:float, rmax:float):
+        super(MatrixFactorizationModel, self).__init__()
 
         self.rmin = rmin
         self.rmax = rmax
@@ -72,23 +62,4 @@ class DistMatrixFactorizationModel(SimpleConfModel):
         return torch.stack([prediction * (self.rmax - self.rmin) + self.rmin, torch.abs(sim - sim.mean())], dim=1)
 
     def regularization(self):
-        return 0#self.l2(self.user_factors) + self.l2(self.item_factors)
-
-    def loss(self, user_ids, item_ids, labels, optimizer):
-        optimizer.zero_grad()
-        outputs = self.forward(user_ids, item_ids)
-        rating_loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001
-
-        outputs_detached = outputs.detach()
-        outputs_unique = outputs_detached.unique()
-        density = get_density(outputs_detached, n_values=len(outputs_unique),
-                    min_value=outputs_detached.min(),
-                    max_value=outputs_detached.max())
-        expected_density = get_y(self.poly_model, outputs_unique)
-
-        dist_loss = self.criterion(expected_density, density)
-
-        loss = rating_loss + dist_loss
-        loss.backward()
-        optimizer.step()
-        return loss
+        return self.l2(self.user_factors) + self.l2(self.item_factors)
