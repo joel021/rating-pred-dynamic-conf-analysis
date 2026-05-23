@@ -4,6 +4,7 @@ import torch
 
 from recsysconfident.data_handling.datasets.csv_reader import CsvReader
 from recsysconfident.ml.models.probabilistic_distributions.cgp_rank import get_cgprank_and_dataloader
+from recsysconfident.ml.models.probabilistic_distributions.lbd import get_lbd_model_and_dataloader
 from recsysconfident.ml.models.sampling_based_uncertainty.dropout_uncertainty_model import get_MCDropoutRecModel_and_dataloader
 
 from recsysconfident.data_handling.datasets.amazon_products import AmazonProductsReader
@@ -89,7 +90,8 @@ class Environment:
             "cgprank": get_cgprank_and_dataloader,
             "ordrec": get_ordrec_model_and_dataloader,
             "cpordrecgat": get_cpordrecgat_model_and_dataloader,
-            "mf": get_mf_model_and_dataloader
+            "mf": get_mf_model_and_dataloader,
+            "lbd": get_lbd_model_and_dataloader
         }
 
         if not self.database_name in self.database_name_fn:
