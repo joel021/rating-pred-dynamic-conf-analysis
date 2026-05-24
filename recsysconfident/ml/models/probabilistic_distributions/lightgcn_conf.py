@@ -19,7 +19,7 @@ def get_lightgcn_conf_model_and_dataloader(info: DatasetInfo, fold):
     norm_adj = normalize_adj(adj)
     Graph = scipy_to_torch_sparse(norm_adj)
 
-    model = LightGCN(
+    model = PRLightGCN(
                 Graph,
                 info.n_users,
                 info.n_items,
@@ -32,10 +32,10 @@ def get_lightgcn_conf_model_and_dataloader(info: DatasetInfo, fold):
                  step=info.rate_range[2])
     return model, fit_dataloader, eval_dataloader
 
-class LightGCN(SimpleConfModel):
+class PRLightGCN(SimpleConfModel):
 
     def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin:float, rmax:float, step: float, dropout=True):
-        super(LightGCN, self).__init__()
+        super(PRLightGCN, self).__init__()
         self.delta_r = step/2.0
         self.Graph = Graph
         self.rmax = rmax

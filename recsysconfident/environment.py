@@ -3,6 +3,7 @@ import os
 import torch
 
 from recsysconfident.data_handling.datasets.csv_reader import CsvReader
+from recsysconfident.ml.models.probabilistic_distributions.cbpmf import get_cbpmf_model_and_dataloader
 from recsysconfident.ml.models.probabilistic_distributions.cgp_rank import get_cgprank_and_dataloader
 from recsysconfident.ml.models.probabilistic_distributions.lbd import get_lbd_model_and_dataloader
 from recsysconfident.ml.models.sampling_based_uncertainty.dropout_uncertainty_model import get_MCDropoutRecModel_and_dataloader
@@ -82,6 +83,7 @@ class Environment:
         }
 
         self.model_name_fn = {
+            "cbpmf": get_cbpmf_model_and_dataloader,
             "dropout": get_MCDropoutRecModel_and_dataloader,
             "cpmf": get_cpmf_model_and_dataloader,
             "prlightgcn": get_lightgcn_conf_model_and_dataloader,

@@ -7,9 +7,9 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.fit.early_stopping import EarlyStopping
 
 
-def get_cbpmf_model_and_dataloader(info: DatasetInfo):
+def get_cbpmf_model_and_dataloader(info: DatasetInfo, fold):
 
-    fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
+    fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = CBPMFModel(
         num_users=info.n_users,
@@ -17,11 +17,11 @@ def get_cbpmf_model_and_dataloader(info: DatasetInfo):
         latent_dim=20,
         rmin=info.rate_range[0],
         rmax=info.rate_range[1],
-        device = device,
+        device=device,
         delta_r=0.25
     )
 
-    return model, fit_dataloader, eval_dataloader, test_dataloader
+    return model, fit_dataloader, eval_dataloader
 
 
 class CBPMFModel(nn.Module):
@@ -420,28 +420,38 @@ def train_cbpmf(model: CBPMFModel, fit_dl, val_dl, environ, device, epochs=50, p
     model = model.to(device)
     early_stopping = EarlyStopping(patience=patience, path=environ.model_uri)
     history = []
+
+    # Decouple Gibbs sampling from mini-batches by reconstructing the full training set
+    all_users = []
+    all_items = []
+    all_ratings = []
+    for data in fit_dl:
+        u_idx, i_idx, r = data
+        all_users.append(u_idx)
+        all_items.append(i_idx)
+        all_ratings.append(r)
+
+    full_user_idx = torch.cat(all_users).to(device).long()
+    full_item_idx = torch.cat(all_items).to(device).long()
+    full_ratings = torch.cat(all_ratings).to(device).float()
+    full_ratings_norm = (full_ratings - model.rmin) / (model.rmax - model.rmin)
+
     for t in range(epochs):
 
-        train_loss = 0.
         model.train()
 
-        for data in fit_dl:
-            user_idx, item_idx, ratings = data
-            user_idx, item_idx, ratings = user_idx.to(model.device), item_idx.to(model.device), ratings.to(model.device)
-            ratings_norm = (ratings - model.rmin) / (model.rmax - model.rmin)
+        # Perform one full-dataset Gibbs sampling step
+        mu_u, Lambda_u = sample_hyper_u(model)
+        mu_v, Lambda_v = sample_hyper_v(model)
+        sample_gamma(model, full_user_idx, full_item_idx, full_ratings_norm)
+        sample_user_factors_sparse(model, full_user_idx, full_item_idx, full_ratings_norm, mu_u, Lambda_u)
+        sample_item_factors_sparse(model, full_user_idx, full_item_idx, full_ratings_norm, mu_v, Lambda_v)
 
-            mu_u, Lambda_u = sample_hyper_u(model)
-            mu_v, Lambda_v = sample_hyper_v(model)
-            sample_gamma(model, user_idx, item_idx, ratings_norm)
-            sample_user_factors_sparse(model, user_idx, item_idx, ratings_norm, mu_u, Lambda_u)
-            sample_item_factors_sparse(model, user_idx, item_idx, ratings_norm, mu_v, Lambda_v)
-
-            mu, sigma = model(user_idx, item_idx)
-
+        # Track full-dataset training loss for logging
+        with torch.no_grad():
+            mu, sigma = model(full_user_idx, full_item_idx)
             mu_denorm = mu * (model.rmax - model.rmin) + model.rmin
-            train_loss +=  torch.sqrt(torch.mean((mu_denorm - ratings)**2))
-
-        avg_loss = train_loss / len(fit_dl)
+            avg_loss = torch.sqrt(torch.mean((mu_denorm - full_ratings)**2)).item()
 
         val_loss = 0.
         with torch.no_grad():
@@ -453,7 +463,7 @@ def train_cbpmf(model: CBPMFModel, fit_dl, val_dl, environ, device, epochs=50, p
 
                 val_loss += torch.sqrt(torch.mean((mu * (model.rmax - model.rmin) + model.rmin - ratings) ** 2))
 
-        avg_vloss = val_loss / len(val_dl)
+        avg_vloss = (val_loss / len(val_dl)).item()
 
         print(f"t: {t}, Fit AVG RMSE: {avg_loss}, Val AVG RMSE: {avg_vloss}")
 
