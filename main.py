@@ -26,7 +26,7 @@ def main(setup: Setup):
                               database_name=setup.database_name,
                               split_position=fold,
                               batch_size=setup.batch_size,
-                              min_inter_per_user=setup.min_inter_per_user,
+                              num_negatives=setup.num_negatives,
                               folds=setup.folds
                               )
 

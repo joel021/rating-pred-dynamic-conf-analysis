@@ -36,7 +36,7 @@ class Environment:
                  split_position,
                  batch_size: int = 1024,
                  root_path:str="./",
-                 min_inter_per_user: int=10,
+                 num_negatives=10,
                  folds: int = 7):
         self.work_dir: str = None
         self.dataset_info: DatasetInfo = None
@@ -44,7 +44,7 @@ class Environment:
         self.model_name = model_name
         self.database_name = database_name
         self.root_path = root_path
-        self.min_inter_per_user = min_inter_per_user
+        self.num_negatives = num_negatives
         self.instance_dir = None
         self.split_position = split_position
         self.folds = folds

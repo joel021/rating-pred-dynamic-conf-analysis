@@ -79,7 +79,7 @@ class TestMainFlow(unittest.TestCase):
             "batch_size": 8,
             "patience": 1,
             "learning_rate": 0.01,
-            "min_inter_per_user": 2,
+            "num_negatives": 2,
             "reevaluate": False
         }
         

@@ -15,7 +15,7 @@ class Setup:
                  patience: int = 5,
                  rate_range: list = None,
                  timestamp: str = None,
-                 min_inter_per_user: int =72,
+                 num_negatives=72,
                  reevaluate:bool = False):
 
         self.folds = folds
@@ -26,7 +26,7 @@ class Setup:
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.patience = patience
-        self.min_inter_per_user = min_inter_per_user
+        self.num_negatives = num_negatives
         self.reevaluate = reevaluate
 
         self.set_rate_range(rate_range)
@@ -56,6 +56,6 @@ class Setup:
             'learning_rate': self.learning_rate,
             'patience': self.patience,
             'rate_range': self.rate_range,
-            'min_inter_per_user': self.min_inter_per_user,
+            'num_negatives': self.num_negatives,
             'timestamp': time.strftime('%Y-%m-%d-%H-%M-%S')
         }

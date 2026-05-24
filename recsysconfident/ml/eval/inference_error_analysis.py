@@ -36,16 +36,17 @@ def export_elementwise_error(model, environ: Environment, device, fold: int) -> 
 def append_neg_samples(split_df: pd.DataFrame, environ: Environment, rmin: float):
 
     split_df.loc[:, NEG_FLAG_COL] = 0
-    if environ.min_inter_per_user == 0:
+    if environ.num_negatives == 0:
         return split_df
 
-    sample_pred_neg = SamplePredNegatives(data_info=environ.dataset_info, num_negatives=environ.min_inter_per_user)
+    sample_pred_neg = SamplePredNegatives(data_info=environ.dataset_info, num_negatives=environ.num_negatives)
     users_ids = set(split_df[environ.dataset_info.user_col].unique().tolist())
     neg_df = sample_pred_neg.get_neg_candidates(users_ids, rmin)
     neg_df.loc[:, NEG_FLAG_COL] = 1
     split_df = pd.concat([split_df, neg_df], ignore_index=True)
 
     return split_df
+
 
 
 def inference(model: TorchModel, split_df: pd.DataFrame, environ: Environment, device):

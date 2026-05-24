@@ -60,4 +60,12 @@ class TestSamplePredNegatives(unittest.TestCase):
         items_per_user = self.rank_generator._get_items_per_user({1,2,3})
         assert items_per_user.keys() == {1,2,3}
 
+    def test_num_negatives_none_samples_all(self):
+        # Setting num_negatives to None should return all remaining non-interacted items
+        user_candidate_sets = self.rank_generator._sample_negative_candidates_sets(self.items_per_user, 10, None)
+        # User 1 has items ids 1 and 2, so the 8 remaining items (0, 3, 4, 5, 6, 7, 8, 9) should all be returned
+        self.assertEqual(len(user_candidate_sets[1]), 8)
+        self.assertEqual(set(user_candidate_sets[1]), {0, 3, 4, 5, 6, 7, 8, 9})
+
+
 

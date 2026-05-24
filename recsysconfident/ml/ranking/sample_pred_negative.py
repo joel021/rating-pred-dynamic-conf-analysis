@@ -10,7 +10,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 
 class SamplePredNegatives:
 
-    def __init__(self, data_info: DatasetInfo, num_negatives: int=100):
+    def __init__(self, data_info: DatasetInfo, num_negatives=100):
         self.data_info = data_info
         self.num_negatives = num_negatives
 
@@ -56,8 +56,12 @@ class SamplePredNegatives:
         for user, pos_items_labels in items_per_users.items():
             pos_items, labels = pos_items_labels
             neg_items = list(all_items - pos_items)
-            sampled_neg_items = np.random.choice(neg_items, size=min(num_negatives, len(neg_items)), replace=False)
+            if num_negatives is None:
+                sampled_neg_items = neg_items
+            else:
+                sampled_neg_items = list(np.random.choice(neg_items, size=min(num_negatives, len(neg_items)), replace=False))
 
-            user_candidate_sets[user] = list(sampled_neg_items)
+            user_candidate_sets[user] = sampled_neg_items
 
         return user_candidate_sets
+
