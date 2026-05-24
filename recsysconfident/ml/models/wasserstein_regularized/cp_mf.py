@@ -7,7 +7,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
-def get_cpmf_model_and_dataloader(info: DatasetInfo, fold):
+def get_cpmf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 

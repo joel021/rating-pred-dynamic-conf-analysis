@@ -10,7 +10,7 @@ from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, s
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 
-def get_lightgcn_model_and_dataloader(info: DatasetInfo):
+def get_lightgcn_wasserstein_model_and_dataloader(info: DatasetInfo):
 
     fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
 

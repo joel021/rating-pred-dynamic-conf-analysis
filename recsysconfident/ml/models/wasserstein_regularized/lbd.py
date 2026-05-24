@@ -12,7 +12,7 @@ def beta_cdf(x_batch, alpha, beta, eps=1e-7):
     b = beta.unsqueeze(-1)
     return betainc(a, b, x)
 
-def get_lbd_model_and_dataloader(info: DatasetInfo, fold: int):
+def get_lbd_wasserstein_model_and_dataloader(info: DatasetInfo, fold: int):
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     if not (info.rate_range is None) and len(info.rate_range) == 3:

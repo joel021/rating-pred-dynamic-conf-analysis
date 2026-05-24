@@ -5,7 +5,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
-def get_mf_model_and_dataloader(info: DatasetInfo, fold):
+def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 

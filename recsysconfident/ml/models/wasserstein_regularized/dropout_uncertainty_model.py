@@ -7,7 +7,7 @@ from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
-def get_MCDropoutRecModel_and_dataloader(info: DatasetInfo, fold: int):
+def get_MCDropoutRecModel_wasserstein_and_dataloader(info: DatasetInfo, fold: int):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
