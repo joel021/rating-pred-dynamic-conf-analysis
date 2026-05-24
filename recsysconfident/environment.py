@@ -38,7 +38,8 @@ class Environment:
                  root_path:str="./",
                  num_negatives=10,
                  folds: int = 7,
-                 hyperparameters: dict = None):
+                 hyperparameters: dict = None,
+                 setup_name: str = None):
         self.work_dir: str = None
         self.dataset_info: DatasetInfo = None
         self.batch_size = batch_size
@@ -50,6 +51,7 @@ class Environment:
         self.split_position = split_position
         self.folds = folds
         self.hyperparameters = hyperparameters
+        self.setup_name = setup_name
         
         self.setup_instance_dir(None)
 
@@ -63,7 +65,10 @@ class Environment:
     def setup_instance_dir(self, instance_dir: str):
 
         if instance_dir is None:
-            self.work_dir = f"./runs/{self.database_name}-{self.model_name}"
+            if self.setup_name:
+                self.work_dir = f"./runs/{self.setup_name}"
+            else:
+                self.work_dir = f"./runs/{self.database_name}-{self.model_name}"
             instance_dir = f"{self.work_dir}-{self.split_position}"
 
         self.instance_dir = instance_dir

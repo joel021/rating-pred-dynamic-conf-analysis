@@ -28,7 +28,8 @@ def main(setup: Setup):
                               batch_size=setup.batch_size,
                               num_negatives=setup.num_negatives,
                               folds=setup.folds,
-                              hyperparameters=setup.hyperparameters
+                              hyperparameters=setup.hyperparameters,
+                              setup_name=setup.setup_name
                               )
 
         if setup_model_results_exists(environ.instance_dir) and not setup.reevaluate:
@@ -94,6 +95,7 @@ if __name__ == '__main__':
         for key in keys:
             print(f"Running setup: {key}")
             setup_dict = setups[key]
+            setup_dict['setup_name'] = key
             if args.k_folds is not None:
                 setup_dict['folds'] = args.k_folds
             if args.fit_mode is not None:

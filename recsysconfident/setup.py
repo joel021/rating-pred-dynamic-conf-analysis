@@ -17,7 +17,8 @@ class Setup:
                  timestamp: str = None,
                  num_negatives=72,
                  reevaluate:bool = False,
-                 hyperparameters: dict = None):
+                 hyperparameters: dict = None,
+                 setup_name: str = None):
 
         self.folds = folds
         self.model_name = model_name
@@ -30,6 +31,7 @@ class Setup:
         self.num_negatives = num_negatives
         self.reevaluate = reevaluate
         self.hyperparameters = hyperparameters
+        self.setup_name = setup_name
 
         self.set_rate_range(rate_range)
 
@@ -63,4 +65,6 @@ class Setup:
         }
         if self.hyperparameters is not None:
             res['hyperparameters'] = self.hyperparameters
+        if self.setup_name is not None:
+            res['setup_name'] = self.setup_name
         return res

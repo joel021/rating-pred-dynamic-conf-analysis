@@ -14,31 +14,49 @@ from recsysconfident.ml.models.wasserstein_regularized.ord_rec_mf import OrdRec
 class TestWassersteinLambda(unittest.TestCase):
 
     def test_setup_hyperparameters_propagation(self):
-        # 1. Test Setup stores and serializes hyperparameters
+        # 1. Test Setup stores and serializes hyperparameters and setup_name
         setup_dict = {
             "model_name": "mf_wasserstein",
             "database_name": "ml-100k",
             "folds": 3,
             "hyperparameters": {
                 "wasserstein_lambda": 0.5
-            }
+            },
+            "setup_name": "my_custom_setup_key"
         }
         setup = Setup(**setup_dict)
         self.assertEqual(setup.hyperparameters, {"wasserstein_lambda": 0.5})
+        self.assertEqual(setup.setup_name, "my_custom_setup_key")
         
         serialized = setup.to_dict()
         self.assertIn("hyperparameters", serialized)
         self.assertEqual(serialized["hyperparameters"]["wasserstein_lambda"], 0.5)
+        self.assertIn("setup_name", serialized)
+        self.assertEqual(serialized["setup_name"], "my_custom_setup_key")
 
     def test_environment_hyperparameters_propagation(self):
-        # 2. Test Environment receives hyperparameters
+        # 2. Test Environment receives hyperparameters and setup_name, and creates setup_name run directory
         env = Environment(
             model_name="mf_wasserstein",
             database_name="ml-100k",
             split_position=0,
-            hyperparameters={"wasserstein_lambda": 0.75}
+            hyperparameters={"wasserstein_lambda": 0.75},
+            setup_name="my_custom_setup_key"
         )
         self.assertEqual(env.hyperparameters, {"wasserstein_lambda": 0.75})
+        self.assertEqual(env.setup_name, "my_custom_setup_key")
+        self.assertEqual(env.work_dir, "./runs/my_custom_setup_key")
+        self.assertEqual(env.instance_dir, "./runs/my_custom_setup_key-0")
+        
+        # Verify fallback logic
+        env_fallback = Environment(
+            model_name="mf_wasserstein",
+            database_name="ml-100k",
+            split_position=1
+        )
+        self.assertIsNone(env_fallback.setup_name)
+        self.assertEqual(env_fallback.work_dir, "./runs/ml-100k-mf_wasserstein")
+        self.assertEqual(env_fallback.instance_dir, "./runs/ml-100k-mf_wasserstein-1")
 
     def test_model_wasserstein_lambda_parsing(self):
         # 3. Test that each model correctly parses wasserstein_lambda and defaults to 1.0
