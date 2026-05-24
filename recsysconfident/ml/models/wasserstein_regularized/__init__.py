@@ -1,0 +1,1 @@
+# Wasserstein Regularized Models Package
