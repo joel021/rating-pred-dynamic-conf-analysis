@@ -17,6 +17,16 @@ from recsysconfident.ml.models.neighborhood_based.k_nearest_neighbors import get
 from recsysconfident.ml.models.probabilistic_distributions.ord_rec_mf import get_ordrec_model_and_dataloader
 from recsysconfident.ml.models.probabilistic_distributions.cp_ordrec_gat import get_cpordrecgat_model_and_dataloader
 from recsysconfident.ml.models.representation_based.mf import get_mf_model_and_dataloader
+from recsysconfident.ml.models.wasserstein_regularized import (
+    get_cpmf_wasserstein_model_and_dataloader,
+    get_MCDropoutRecModel_wasserstein_and_dataloader,
+    get_lbd_wasserstein_model_and_dataloader,
+    get_lightgcn_wasserstein_model_and_dataloader,
+    get_lightgcn_conf_wasserstein_model_and_dataloader,
+    get_mf_wasserstein_model_and_dataloader,
+    get_ordrec_wasserstein_model_and_dataloader,
+)
+
 
 
 class Environment:
@@ -93,7 +103,14 @@ class Environment:
             "ordrec": get_ordrec_model_and_dataloader,
             "cpordrecgat": get_cpordrecgat_model_and_dataloader,
             "mf": get_mf_model_and_dataloader,
-            "lbd": get_lbd_model_and_dataloader
+            "lbd": get_lbd_model_and_dataloader,
+            "cpmf_wasserstein": get_cpmf_wasserstein_model_and_dataloader,
+            "dropout_wasserstein": get_MCDropoutRecModel_wasserstein_and_dataloader,
+            "lbd_wasserstein": get_lbd_wasserstein_model_and_dataloader,
+            "lightgcn_wasserstein": get_lightgcn_wasserstein_model_and_dataloader,
+            "prlightgcn_wasserstein": get_lightgcn_conf_wasserstein_model_and_dataloader,
+            "mf_wasserstein": get_mf_wasserstein_model_and_dataloader,
+            "ordrec_wasserstein": get_ordrec_wasserstein_model_and_dataloader
         }
 
         if not self.database_name in self.database_name_fn:
