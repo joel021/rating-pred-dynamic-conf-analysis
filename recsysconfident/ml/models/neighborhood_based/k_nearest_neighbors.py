@@ -137,6 +137,7 @@ class SparseKNNRecommender():
     def _pairwise_msd(self):
         X = self.R_dense
         mask = (X > 0).float()
+        X2 = X ** 2
 
         n = X.size(0)
         sim = torch.zeros((n, n), device=self.device)
@@ -145,13 +146,14 @@ class SparseKNNRecommender():
             end = min(start + self.chunk_size, n)
 
             Xi = X[start:end]              # (C, I)
-            Mi = mask[start:end]
+            Mi = mask[start:end]            # (C, I)
 
-            diff = Xi.unsqueeze(1) - X.unsqueeze(0)      # (C, N, I)
-            common = Mi.unsqueeze(1) * mask.unsqueeze(0)
+            # Efficiently compute sum_j (Xi_j - X_j)^2 * Mi_j * M_j
+            # by expanding to: (Xi^2) @ mask.T - 2 * (Xi @ X.T) + Mi @ (X^2).T
+            msd_num = (Xi ** 2) @ mask.T - 2 * (Xi @ X.T) + Mi @ X2.T
+            common = Mi @ mask.T
 
-            msd = (diff**2 * common).sum(dim=2) / (common.sum(dim=2) + 1e-9)
-
+            msd = msd_num / (common + 1e-9)
             sim[start:end] = 1 / (msd + 1)
 
         return sim
@@ -177,14 +179,15 @@ class SparseKNNRecommender():
             Xi = Xc[start:end]
             Mi = mask[start:end]
 
-            num = (Xi.unsqueeze(1) * Xc.unsqueeze(0)).sum(dim=2)
+            # Replace costly 3D broadcasting (Xi.unsqueeze * Xc.unsqueeze) with fast matrix multiplications
+            num = Xi @ Xc.T
 
             den = torch.sqrt((Xi**2).sum(dim=1, keepdim=True)) * \
                   torch.sqrt((Xc**2).sum(dim=1)).unsqueeze(0)
 
             rho = num / (den + 1e-9)
 
-            n_common = (Mi.unsqueeze(1) * mask.unsqueeze(0)).sum(dim=2)
+            n_common = Mi @ mask.T
 
             shrink = (n_common - 1) / (n_common - 1 + self.shrinkage)
 
