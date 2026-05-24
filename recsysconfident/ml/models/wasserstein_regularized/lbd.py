@@ -13,7 +13,7 @@ def beta_cdf(x_batch, alpha, beta, eps=1e-7):
     b = beta.unsqueeze(-1)
     return betainc(a, b, x)
 
-def get_lbd_wasserstein_model_and_dataloader(info: DatasetInfo, fold: int):
+def get_lbd_wasserstein_model_and_dataloader(info: DatasetInfo, fold: int, hyperparameters=None):
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
     if not (info.rate_range is None) and len(info.rate_range) == 3:
@@ -28,13 +28,14 @@ def get_lbd_wasserstein_model_and_dataloader(info: DatasetInfo, fold: int):
         num_hidden=512,
         n_ratings=n_ratings,
         rmax=info.rate_range[1],
-        rmin=info.rate_range[0]
+        rmin=info.rate_range[0],
+        hyperparameters=hyperparameters
     )
 
     return model, fit_dataloader, eval_dataloader
 
 class LBD(TorchModel):
-    def __init__(self, num_users: int, num_items: int, num_hidden: int, n_ratings: int, rmax: float = 5.0, rmin: float = 0.0):
+    def __init__(self, num_users: int, num_items: int, num_hidden: int, n_ratings: int, rmax: float = 5.0, rmin: float = 0.0, hyperparameters=None):
         super().__init__(None)
 
         self.num_users = num_users
@@ -60,6 +61,10 @@ class LBD(TorchModel):
         self.epslon = torch.scalar_tensor(0.001)
         self.initialize_weights()
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin.item(), self.rmax.item())
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
 
     def initialize_weights(self):
         nn.init.xavier_uniform_(self.uid_features.weight)
@@ -151,7 +156,7 @@ class LBD(TorchModel):
         R = torch.linspace(self.rmin.item(), self.rmax.item(), self.n_ratings, device=bin_probs.device)
         ratings = torch.sum(bin_probs * R.unsqueeze(0), dim=1)
 
-        loss = loss + self.regularization() + self.soft_hist_wasserstein(ratings, labels)
+        loss = loss + self.regularization() + self.wasserstein_lambda * self.soft_hist_wasserstein(ratings, labels)
 
         loss.backward()
         optimizer.step()

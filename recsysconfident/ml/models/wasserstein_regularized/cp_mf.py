@@ -8,7 +8,7 @@ from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
-def get_cpmf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
+def get_cpmf_wasserstein_model_and_dataloader(info: DatasetInfo, fold, hyperparameters=None):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
@@ -16,7 +16,8 @@ def get_cpmf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
         num_users=info.n_users,
         num_items=info.n_items,
         latent_dim=20,
-        rate_range=info.rate_range
+        rate_range=info.rate_range,
+        hyperparameters=hyperparameters
     )
 
     return model, fit_dataloader, eval_dataloader
@@ -24,7 +25,7 @@ def get_cpmf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
 
 class CPMF(TorchModel):
 
-    def __init__(self, num_users, num_items, latent_dim, rate_range: list):
+    def __init__(self, num_users, num_items, latent_dim, rate_range: list, hyperparameters=None):
         super().__init__(None)
 
         self.rmin = rate_range[0]
@@ -60,6 +61,10 @@ class CPMF(TorchModel):
 
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
 
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
+
     def forward(self, user_ids, item_ids):
         u = self.user_factors(user_ids)  # (batch, k)
         v = self.item_factors(item_ids)  # (batch, k)
@@ -87,7 +92,7 @@ class CPMF(TorchModel):
         sigma = pred_scores[:, 1]
         nll = -d.Normal(mu, sigma).log_prob(labels).mean()
 
-        loss = nll + self.regularization() + self.soft_hist_wasserstein(mu, labels)
+        loss = nll + self.regularization() + self.wasserstein_lambda * self.soft_hist_wasserstein(mu, labels)
         loss.backward()
         optimizer.step()
         return loss

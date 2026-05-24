@@ -16,7 +16,8 @@ class Setup:
                  rate_range: list = None,
                  timestamp: str = None,
                  num_negatives=72,
-                 reevaluate:bool = False):
+                 reevaluate:bool = False,
+                 hyperparameters: dict = None):
 
         self.folds = folds
         self.model_name = model_name
@@ -28,6 +29,7 @@ class Setup:
         self.patience = patience
         self.num_negatives = num_negatives
         self.reevaluate = reevaluate
+        self.hyperparameters = hyperparameters
 
         self.set_rate_range(rate_range)
 
@@ -47,7 +49,7 @@ class Setup:
             self.rate_range = rate_range
 
     def to_dict(self) -> dict:
-        return {
+        res = {
             'model_name': self.model_name,
             'database_name': self.database_name,
             'folds': self.folds,
@@ -59,3 +61,6 @@ class Setup:
             'num_negatives': self.num_negatives,
             'timestamp': time.strftime('%Y-%m-%d-%H-%M-%S')
         }
+        if self.hyperparameters is not None:
+            res['hyperparameters'] = self.hyperparameters
+        return res

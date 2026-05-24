@@ -114,7 +114,9 @@ class SoftHistogramWasserstein(nn.Module):
         super().__init__()
 
         if (num_bins == None) :
-            num_bins = r_max - r_min + 1
+            num_bins = int(r_max - r_min + 1)
+        else:
+            num_bins = int(num_bins)
             
         self.bandwidth = bandwidth
 

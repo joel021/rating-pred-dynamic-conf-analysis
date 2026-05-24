@@ -37,7 +37,8 @@ class Environment:
                  batch_size: int = 1024,
                  root_path:str="./",
                  num_negatives=10,
-                 folds: int = 7):
+                 folds: int = 7,
+                 hyperparameters: dict = None):
         self.work_dir: str = None
         self.dataset_info: DatasetInfo = None
         self.batch_size = batch_size
@@ -48,6 +49,7 @@ class Environment:
         self.instance_dir = None
         self.split_position = split_position
         self.folds = folds
+        self.hyperparameters = hyperparameters
         
         self.setup_instance_dir(None)
 
@@ -144,7 +146,20 @@ class Environment:
         if not self.model_name in self.model_name_fn:
             raise ValueError(f"Invalid model name: {self.model_name}")
 
-        model, fit_dl, val_dl = self.model_name_fn[self.model_name](self.dataset_info, self.split_position)
+        import inspect
+        func = self.model_name_fn[self.model_name]
+        sig = inspect.signature(func)
+        
+        args = [self.dataset_info]
+        params = list(sig.parameters.keys())
+        if len(params) >= 2 or "fold" in sig.parameters:
+            args.append(self.split_position)
+            
+        kwargs = {}
+        if "hyperparameters" in sig.parameters:
+            kwargs["hyperparameters"] = self.hyperparameters
+
+        model, fit_dl, val_dl = func(*args, **kwargs)
 
         if os.path.isfile(self.model_uri):
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

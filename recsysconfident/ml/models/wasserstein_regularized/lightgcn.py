@@ -11,7 +11,7 @@ from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, s
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 
-def get_lightgcn_wasserstein_model_and_dataloader(info: DatasetInfo):
+def get_lightgcn_wasserstein_model_and_dataloader(info: DatasetInfo, fold=None, hyperparameters=None):
 
     fit_dataloader, eval_dataloader, test_dataloader = ui_ids_label(info)
 
@@ -28,12 +28,13 @@ def get_lightgcn_wasserstein_model_and_dataloader(info: DatasetInfo):
                  keep_prob=0.6,
                  A_split=False,
                  rmin=info.rate_range[0],
-                 rmax=info.rate_range[1])
+                 rmax=info.rate_range[1],
+                 hyperparameters=hyperparameters)
     return model, fit_dataloader, eval_dataloader, test_dataloader
 
 class LightGCN(SimpleConfModel):
 
-    def __init__(self, Graph, n_users, n_items, emb_dim, n_layers, keep_prob: float, A_split, rmin, rmax, dropout=True):
+    def __init__(self, Graph, n_users, n_items, emb_dim, n_layers, keep_prob: float, A_split, rmin, rmax, dropout=True, hyperparameters=None):
         super(LightGCN, self).__init__()
         self.Graph = Graph
         self.rmax = rmax
@@ -48,6 +49,10 @@ class LightGCN(SimpleConfModel):
         self.__init_weight()
         self.criterion = nn.MSELoss()
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
 
     def __init_weight(self):
 
@@ -139,7 +144,7 @@ class LightGCN(SimpleConfModel):
         optimizer.zero_grad()
         outputs = self.forward(user_ids, item_ids)
 
-        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.soft_hist_wasserstein(outputs[:, 0], labels)
+        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.wasserstein_lambda * self.soft_hist_wasserstein(outputs[:, 0], labels)
         loss.backward()
         optimizer.step()
         return loss

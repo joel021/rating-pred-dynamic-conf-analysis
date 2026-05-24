@@ -12,7 +12,7 @@ from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, s
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 
-def get_lightgcn_conf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
+def get_lightgcn_conf_wasserstein_model_and_dataloader(info: DatasetInfo, fold, hyperparameters=None):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
@@ -30,12 +30,13 @@ def get_lightgcn_conf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
                  A_split=False,
                  rmin=info.rate_range[0],
                  rmax=info.rate_range[1],
-                 step=info.rate_range[2])
+                 step=info.rate_range[2],
+                 hyperparameters=hyperparameters)
     return model, fit_dataloader, eval_dataloader
 
 class PRLightGCN(SimpleConfModel):
 
-    def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin:float, rmax:float, step: float, dropout=True):
+    def __init__(self, Graph, n_users:int, n_items:int, emb_dim:int, n_layers:int, keep_prob: float, A_split, rmin:float, rmax:float, step: float, dropout=True, hyperparameters=None):
         super(PRLightGCN, self).__init__()
         self.delta_r = step/2.0
         self.Graph = Graph
@@ -52,6 +53,10 @@ class PRLightGCN(SimpleConfModel):
         self.mse_loss = nn.MSELoss()
 
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
 
     def __init_weight(self):
 
@@ -165,7 +170,7 @@ class PRLightGCN(SimpleConfModel):
 
         R = mu * (self.rmax - self.rmin) + self.rmin
 
-        loss = nll + mse_loss * 0.001 + self.soft_hist_wasserstein(R, labels)
+        loss = nll + mse_loss * 0.001 + self.wasserstein_lambda * self.soft_hist_wasserstein(R, labels)
         loss.backward()
         optimizer.step()
         return loss

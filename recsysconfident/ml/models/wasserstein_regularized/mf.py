@@ -6,7 +6,7 @@ from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_id
 from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
-def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
+def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold, hyperparameters=None):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
@@ -15,7 +15,8 @@ def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
         num_items=info.n_items,
         num_factors=64,
         rmin=info.rate_range[0],
-        rmax=info.rate_range[1]
+        rmax=info.rate_range[1],
+        hyperparameters=hyperparameters
     )
 
     return model, fit_dataloader, eval_dataloader
@@ -23,7 +24,7 @@ def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
 
 class MatrixFactorizationModel(SimpleConfModel):
 
-    def __init__(self, num_users: int, num_items:int, num_factors:int, rmin:float, rmax:float):
+    def __init__(self, num_users: int, num_items:int, num_factors:int, rmin:float, rmax:float, hyperparameters=None):
         super(MatrixFactorizationModel, self).__init__()
 
         self.rmin = rmin
@@ -44,6 +45,10 @@ class MatrixFactorizationModel(SimpleConfModel):
         self.criterion = nn.MSELoss()
 
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
         
 
     def forward(self, user, item):
@@ -71,7 +76,7 @@ class MatrixFactorizationModel(SimpleConfModel):
     def loss(self, user_ids, item_ids, labels, optimizer):
         optimizer.zero_grad()
         outputs = self.forward(user_ids, item_ids)
-        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.soft_hist_wasserstein(outputs[:,0], labels)
+        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.wasserstein_lambda * self.soft_hist_wasserstein(outputs[:,0], labels)
         loss.backward()
         optimizer.step()
         return loss

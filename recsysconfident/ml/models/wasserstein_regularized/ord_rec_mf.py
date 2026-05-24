@@ -9,7 +9,7 @@ from recsysconfident.ml.models.torchmodel import TorchModel
 from recsysconfident.ml.losses import SoftHistogramWasserstein
 
 
-def get_ordrec_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
+def get_ordrec_wasserstein_model_and_dataloader(info: DatasetInfo, fold, hyperparameters=None):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
@@ -19,14 +19,15 @@ def get_ordrec_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
         num_factors=512,
         rmax=info.rate_range[1],
         rmin=info.rate_range[0],
-        items_per_user=info.items_per_user
+        items_per_user=info.items_per_user,
+        hyperparameters=hyperparameters
     )
 
     return model, fit_dataloader, eval_dataloader
 
 
 class OrdRec(TorchModel):
-    def __init__(self, num_users, num_items, num_factors, items_per_user, rmax: float, rmin: float):
+    def __init__(self, num_users, num_items, num_factors, items_per_user, rmax: float, rmin: float, hyperparameters=None):
         super(OrdRec, self).__init__(items_per_user)
         self.num_ratings = int((rmax - rmin) + 1)
         self.num_users = num_users
@@ -53,6 +54,10 @@ class OrdRec(TorchModel):
         self.switch_to_rating()
 
         self.soft_hist_wasserstein = SoftHistogramWasserstein(rmin, rmax)
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
 
     def switch_to_ranking(self):
         self.loss = self.fit_ranking_loss
@@ -205,7 +210,7 @@ class OrdRec(TorchModel):
         true_probs = torch.clamp(true_probs, 1e-10, 1.0)
         nll_loss = -torch.log(true_probs).mean()
 
-        total_loss = nll_loss + self.regularization() * 0.0001 + self.soft_hist_wasserstein(ratings, rating)
+        total_loss = nll_loss + self.regularization() * 0.0001 + self.wasserstein_lambda * self.soft_hist_wasserstein(ratings, rating)
 
         total_loss.backward()
         optimizer.step()

@@ -27,7 +27,8 @@ def main(setup: Setup):
                               split_position=fold,
                               batch_size=setup.batch_size,
                               num_negatives=setup.num_negatives,
-                              folds=setup.folds
+                              folds=setup.folds,
+                              hyperparameters=setup.hyperparameters
                               )
 
         if setup_model_results_exists(environ.instance_dir) and not setup.reevaluate:

@@ -8,7 +8,7 @@ from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
-def get_MCDropoutRecModel_wasserstein_and_dataloader(info: DatasetInfo, fold: int):
+def get_MCDropoutRecModel_wasserstein_and_dataloader(info: DatasetInfo, fold: int, hyperparameters=None):
 
     fit_dataloader, eval_dataloader = ui_ids_label(info, fold)
 
@@ -18,7 +18,8 @@ def get_MCDropoutRecModel_wasserstein_and_dataloader(info: DatasetInfo, fold: in
         r_min=info.rate_range[0],
         r_max=info.rate_range[1],
         emb_dim=64,
-        hidden_dim=64
+        hidden_dim=64,
+        hyperparameters=hyperparameters
     )
 
     return model, fit_dataloader, eval_dataloader
@@ -37,6 +38,7 @@ class MCDropoutRecModel(TorchModel):
         dropout=0.2,
         l2_reg=1e-6,
         mc_samples=50,
+        hyperparameters=None,
     ):
         super().__init__(items_per_user)
 
@@ -56,6 +58,10 @@ class MCDropoutRecModel(TorchModel):
         self.mc_samples = mc_samples
 
         self.soft_hist_wasserstein = SoftHistogramWasserstein(self.r_min, self.r_max)
+
+        self.wasserstein_lambda = 1.0
+        if hyperparameters and "wasserstein_lambda" in hyperparameters:
+            self.wasserstein_lambda = float(hyperparameters["wasserstein_lambda"])
 
     def forward(self, user_ids, item_ids):
         u = self.user_emb(user_ids)
@@ -151,7 +157,7 @@ class MCDropoutRecModel(TorchModel):
         mse = F.mse_loss(preds[:, 0], labels_norm, reduction="mean")
         reg = self.regularization()
 
-        loss = mse + reg + self.soft_hist_wasserstein(self._denormalize(preds[:,0]), labels)
+        loss = mse + reg + self.wasserstein_lambda * self.soft_hist_wasserstein(self._denormalize(preds[:,0]), labels)
 
         loss.backward()
         optimizer.step()
