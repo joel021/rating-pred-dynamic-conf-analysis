@@ -6,6 +6,7 @@ import random
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.ml.models.torchmodel import TorchModel
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 
 
 def get_ordrec_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
@@ -50,6 +51,8 @@ class OrdRec(TorchModel):
         # Initialize parameters
         self._init_weights()
         self.switch_to_rating()
+
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(rmin, rmax)
 
     def switch_to_ranking(self):
         self.loss = self.fit_ranking_loss
@@ -193,7 +196,16 @@ class OrdRec(TorchModel):
     def fit_prob_loss(self, user_id, item_id, rating, optimizer):
         optimizer.zero_grad()
 
-        total_loss = self.prob_loss(user_id, item_id, rating) + self.regularization() * 0.0001
+        probs = self.predict_proba(user_id, item_id)
+        ratings, _ = self._pred_ratings_confidence(probs)
+
+        # Compute standard prob_loss
+        rating_idx = (rating - self.rmin).long()
+        true_probs = probs.gather(1, rating_idx.unsqueeze(1)).squeeze()
+        true_probs = torch.clamp(true_probs, 1e-10, 1.0)
+        nll_loss = -torch.log(true_probs).mean()
+
+        total_loss = nll_loss + self.regularization() * 0.0001 + self.soft_hist_wasserstein(ratings, rating)
 
         total_loss.backward()
         optimizer.step()

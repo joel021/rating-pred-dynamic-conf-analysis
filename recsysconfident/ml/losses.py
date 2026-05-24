@@ -105,14 +105,17 @@ class KDELoss(nn.Module):
 class SoftHistogramWasserstein(nn.Module):
 
     def __init__(self,
-                 r_min,
-                 r_max,
-                 num_bins, #suggested num_bins = relevance range + 1 = (r_max - r_min) + 1
+                 r_min=1.0,
+                 r_max=5.0,
+                 num_bins=None, #suggested num_bins = relevance range + 1 = (r_max - r_min) + 1
                  bandwidth=0.5 #suggested as 0.5 because the relevances are usually discrete integers like 1, 2, 3, 4, 5
                  ):
 
         super().__init__()
 
+        if (num_bins == None) :
+            num_bins = r_max - r_min + 1
+            
         self.bandwidth = bandwidth
 
         self.register_buffer(

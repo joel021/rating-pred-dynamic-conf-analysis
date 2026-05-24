@@ -4,6 +4,7 @@ from torch_betainc import betainc
 
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 def beta_cdf(x_batch, alpha, beta, eps=1e-7):
@@ -58,6 +59,7 @@ class LBD(TorchModel):
 
         self.epslon = torch.scalar_tensor(0.001)
         self.initialize_weights()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
 
     def initialize_weights(self):
         nn.init.xavier_uniform_(self.uid_features.weight)
@@ -145,7 +147,11 @@ class LBD(TorchModel):
         true_bin_probs = bin_probs.gather(1, label_index.unsqueeze(1)).squeeze(1)
         true_bin_probs = torch.clamp(true_bin_probs, min=1e-10, max=1.0)
         loss = -torch.log(true_bin_probs).mean()
-        loss = loss + self.regularization()
+        
+        R = torch.linspace(self.rmin.item(), self.rmax.item(), self.n_ratings, device=bin_probs.device)
+        ratings = torch.sum(bin_probs * R.unsqueeze(0), dim=1)
+
+        loss = loss + self.regularization() + self.soft_hist_wasserstein(ratings, labels)
 
         loss.backward()
         optimizer.step()

@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
 def get_mf_wasserstein_model_and_dataloader(info: DatasetInfo, fold):
@@ -42,6 +43,9 @@ class MatrixFactorizationModel(SimpleConfModel):
 
         self.criterion = nn.MSELoss()
 
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        
+
     def forward(self, user, item):
 
         user_embedding = self.user_factors(user)
@@ -63,3 +67,12 @@ class MatrixFactorizationModel(SimpleConfModel):
 
     def regularization(self):
         return self.l2(self.user_factors) + self.l2(self.item_factors)
+
+    def loss(self, user_ids, item_ids, labels, optimizer):
+        optimizer.zero_grad()
+        outputs = self.forward(user_ids, item_ids)
+        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.soft_hist_wasserstein(outputs[:,0], labels)
+        loss.backward()
+        optimizer.step()
+        return loss
+    

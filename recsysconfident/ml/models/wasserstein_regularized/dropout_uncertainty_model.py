@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
@@ -53,6 +54,8 @@ class MCDropoutRecModel(TorchModel):
 
         self.l2_reg = l2_reg
         self.mc_samples = mc_samples
+
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
 
     def forward(self, user_ids, item_ids):
         u = self.user_emb(user_ids)
@@ -148,7 +151,7 @@ class MCDropoutRecModel(TorchModel):
         mse = F.mse_loss(preds[:, 0], labels_norm, reduction="mean")
         reg = self.regularization()
 
-        loss = mse + reg
+        loss = mse + reg + self.soft_hist_wasserstein(self._denormalize(preds[:,0]), labels)
 
         loss.backward()
         optimizer.step()

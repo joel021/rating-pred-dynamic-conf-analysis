@@ -4,6 +4,7 @@ import torch.distributions as d
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.torchmodel import TorchModel
 
 
@@ -57,6 +58,8 @@ class CPMF(TorchModel):
 
         self.switch_to_rating()
 
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+
     def forward(self, user_ids, item_ids):
         u = self.user_factors(user_ids)  # (batch, k)
         v = self.item_factors(item_ids)  # (batch, k)
@@ -84,7 +87,7 @@ class CPMF(TorchModel):
         sigma = pred_scores[:, 1]
         nll = -d.Normal(mu, sigma).log_prob(labels).mean()
 
-        loss = nll + self.regularization()
+        loss = nll + self.regularization() + self.soft_hist_wasserstein(mu, labels)
         loss.backward()
         optimizer.step()
         return loss

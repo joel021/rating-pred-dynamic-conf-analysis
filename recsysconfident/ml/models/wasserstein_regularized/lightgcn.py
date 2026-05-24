@@ -6,6 +6,7 @@ import torch
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, scipy_to_torch_sparse
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
@@ -46,7 +47,7 @@ class LightGCN(SimpleConfModel):
         self.dropout = dropout
         self.__init_weight()
         self.criterion = nn.MSELoss()
-        print("Light GCN instantiated")
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
 
     def __init_weight(self):
 
@@ -133,3 +134,12 @@ class LightGCN(SimpleConfModel):
 
     def regularization(self):
         return 0
+    
+    def loss(self, user_ids, item_ids, labels, optimizer):
+        optimizer.zero_grad()
+        outputs = self.forward(user_ids, item_ids)
+
+        loss = self.criterion(labels, outputs[:, 0]) + self.regularization() * 0.0001 + self.soft_hist_wasserstein(outputs[:, 0], labels)
+        loss.backward()
+        optimizer.step()
+        return loss

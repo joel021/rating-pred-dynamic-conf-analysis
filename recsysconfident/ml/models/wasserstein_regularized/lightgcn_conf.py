@@ -7,6 +7,7 @@ import torch.distributions as d
 
 from recsysconfident.data_handling.dataloader.int_ui_ids_dataloader import ui_ids_label
 from recsysconfident.data_handling.datasets.datasetinfo import DatasetInfo
+from recsysconfident.ml.losses import SoftHistogramWasserstein
 from recsysconfident.ml.models.GCN_utils import get_adj_matrix, normalize_adj, scipy_to_torch_sparse
 from recsysconfident.ml.models.representation_based.simple_conf_model import SimpleConfModel
 
@@ -50,7 +51,7 @@ class PRLightGCN(SimpleConfModel):
         self.__init_weight()
         self.mse_loss = nn.MSELoss()
 
-        print("Light GCN instantiated")
+        self.soft_hist_wasserstein = SoftHistogramWasserstein()
 
     def __init_weight(self):
 
@@ -162,7 +163,9 @@ class PRLightGCN(SimpleConfModel):
         nll = -d.Normal(mu, sigma).log_prob(true_scores_norm).mean()
         mse_loss = self.mse_loss(mu, labels)
 
-        loss = nll + mse_loss * 0.001
+        R = mu * (self.rmax - self.rmin) + self.rmin
+
+        loss = nll + mse_loss * 0.001 + self.soft_hist_wasserstein(R, labels)
         loss.backward()
         optimizer.step()
         return loss
