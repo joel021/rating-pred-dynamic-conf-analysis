@@ -84,7 +84,10 @@ class CBPMFModel(nn.Module):
         dist = torch.distributions.Normal(mu, sigma)
 
         pred_rating = mu * (self.rmax - self.rmin) + self.rmin
-        confidence = dist.cdf(mu + self.delta_r) - dist.cdf(mu - self.delta_r)
+        
+        # Scale raw delta_r to normalized [0, 1] space to match mu and sigma
+        norm_delta = self.delta_r / (self.rmax - self.rmin) if (self.rmax - self.rmin) != 0 else self.delta_r
+        confidence = dist.cdf(mu + norm_delta) - dist.cdf(mu - norm_delta)
 
         return pred_rating, confidence
 
@@ -485,7 +488,7 @@ def inference_cbpmf(model: CBPMFModel, val_dataloader, delta_r=0.125, rmin=1, rm
 
             dist = torch.distributions.Normal(mu, sigma)
             confidence = dist.cdf(ratings_norm + delta_r) - dist.cdf(ratings_norm - delta_r)
-            pred_ratings = mu.cpu() * rmax + rmin
+            pred_ratings = mu.cpu() * (rmax - rmin) + rmin
 
             conf_tensor.append(confidence.cpu())
             rating_tensor.append(ratings)
