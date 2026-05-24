@@ -59,7 +59,7 @@ class LBD(TorchModel):
 
         self.epslon = torch.scalar_tensor(0.001)
         self.initialize_weights()
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin.item(), self.rmax.item())
 
     def initialize_weights(self):
         nn.init.xavier_uniform_(self.uid_features.weight)

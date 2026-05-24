@@ -51,7 +51,7 @@ class PRLightGCN(SimpleConfModel):
         self.__init_weight()
         self.mse_loss = nn.MSELoss()
 
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
 
     def __init_weight(self):
 

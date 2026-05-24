@@ -43,7 +43,7 @@ class MatrixFactorizationModel(SimpleConfModel):
 
         self.criterion = nn.MSELoss()
 
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
         
 
     def forward(self, user, item):

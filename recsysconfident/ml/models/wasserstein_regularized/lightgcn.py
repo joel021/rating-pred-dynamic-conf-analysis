@@ -47,7 +47,7 @@ class LightGCN(SimpleConfModel):
         self.dropout = dropout
         self.__init_weight()
         self.criterion = nn.MSELoss()
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
 
     def __init_weight(self):
 

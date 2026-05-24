@@ -58,7 +58,7 @@ class CPMF(TorchModel):
 
         self.switch_to_rating()
 
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.rmin, self.rmax)
 
     def forward(self, user_ids, item_ids):
         u = self.user_factors(user_ids)  # (batch, k)

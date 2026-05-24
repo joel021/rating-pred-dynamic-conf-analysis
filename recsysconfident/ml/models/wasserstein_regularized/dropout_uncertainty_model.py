@@ -55,7 +55,7 @@ class MCDropoutRecModel(TorchModel):
         self.l2_reg = l2_reg
         self.mc_samples = mc_samples
 
-        self.soft_hist_wasserstein = SoftHistogramWasserstein()
+        self.soft_hist_wasserstein = SoftHistogramWasserstein(self.r_min, self.r_max)
 
     def forward(self, user_ids, item_ids):
         u = self.user_emb(user_ids)
