@@ -103,3 +103,81 @@ class TestMainFlow(unittest.TestCase):
             # Check eval error CSV
             eval_file = f"{instance_dir}/eval_error_conf-{fold}.csv"
             self.assertTrue(os.path.isfile(eval_file), f"Eval error file missing: {eval_file}")
+
+    def test_main_execution_num_negatives_none(self):
+        setup_dict = {
+            "model_name": self.model_name,
+            "database_name": self.db_name,
+            "folds": 3,
+            "batch_size": 8,
+            "patience": 1,
+            "learning_rate": 0.01,
+            "num_negatives": None,
+            "reevaluate": False
+        }
+        
+        setup = Setup(**setup_dict)
+        
+        # Run main workflow
+        main(setup)
+        
+        # Verify that output files were generated for fold 0 and fold 1 (setup.folds - 1)
+        for fold in range(2):
+            instance_dir = f"./runs/{self.db_name}-{self.model_name}-{fold}"
+            
+            # Check setup JSON
+            setup_file = f"{instance_dir}/setup-{fold}.json"
+            self.assertTrue(os.path.isfile(setup_file), f"Setup file missing: {setup_file}")
+            
+            # Check metrics JSON
+            metrics_file = f"{instance_dir}/metrics-{fold}.json"
+            self.assertTrue(os.path.isfile(metrics_file), f"Metrics file missing: {metrics_file}")
+            
+            # Check eval error CSV
+            eval_file = f"{instance_dir}/eval_error_conf-{fold}.csv"
+            self.assertTrue(os.path.isfile(eval_file), f"Eval error file missing: {eval_file}")
+
+    def test_main_execution_reevaluate(self):
+        from unittest.mock import patch
+
+        setup_dict = {
+            "model_name": self.model_name,
+            "database_name": self.db_name,
+            "folds": 3,
+            "batch_size": 8,
+            "patience": 1,
+            "learning_rate": 0.01,
+            "num_negatives": 2,
+            "reevaluate": False
+        }
+        
+        setup = Setup(**setup_dict)
+        
+        # 1. Run main workflow with reevaluate=False to train the model first
+        main(setup)
+        
+        # Verify model was indeed trained and saved
+        for fold in range(2):
+            instance_dir = f"./runs/{self.db_name}-{self.model_name}-{fold}"
+            model_file = f"{instance_dir}/model-{fold}.pth"
+            self.assertTrue(os.path.isfile(model_file), f"Model file missing: {model_file}")
+
+        # 2. Run main workflow with reevaluate=True and patch/mock setup_fit to ensure it's not called
+        setup_dict["reevaluate"] = True
+        setup_reev = Setup(**setup_dict)
+
+        with patch("main.setup_fit") as mock_setup_fit:
+            main(setup_reev)
+            # Ensure setup_fit was never called
+            mock_setup_fit.assert_not_called()
+
+        # Check that setup, metrics, and eval error files are still present
+        for fold in range(2):
+            instance_dir = f"./runs/{self.db_name}-{self.model_name}-{fold}"
+            setup_file = f"{instance_dir}/setup-{fold}.json"
+            self.assertTrue(os.path.isfile(setup_file))
+            metrics_file = f"{instance_dir}/metrics-{fold}.json"
+            self.assertTrue(os.path.isfile(metrics_file))
+            eval_file = f"{instance_dir}/eval_error_conf-{fold}.csv"
+            self.assertTrue(os.path.isfile(eval_file))
+

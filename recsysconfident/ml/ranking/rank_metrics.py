@@ -20,16 +20,23 @@ class ConfAwareRankingMetrics:
         return (relevances >= self.r_t).astype(int)
 
     def _get_true_pred_scores(self, df: pd.DataFrame) -> dict:
+        if df.empty:
+            return {}
 
-        user_true_pred_scores = (
-            df.groupby(self.data_info.user_col)
-            .apply(lambda x: (
-                x.sort_values(by=self.data_info.r_pred_col, ascending=False)
-                .loc[:, [self.data_info.relevance_col, self.data_info.r_pred_col]]
-                .pipe(lambda s: (s[self.data_info.relevance_col].values, s[self.data_info.r_pred_col].values))
-            ))
-            .to_dict()
-        )
+        df_sorted = df.sort_values(by=[self.data_info.user_col, self.data_info.r_pred_col], ascending=[True, False])
+        
+        users = df_sorted[self.data_info.user_col].values
+        relevances = df_sorted[self.data_info.relevance_col].values
+        preds = df_sorted[self.data_info.r_pred_col].values
+        
+        unique_users, indices, counts = np.unique(users, return_index=True, return_counts=True)
+        
+        user_true_pred_scores = {}
+        for user, idx, count in zip(unique_users, indices, counts):
+            user_true_pred_scores[user] = (
+                relevances[idx:idx+count],
+                preds[idx:idx+count]
+            )
         return user_true_pred_scores
 
     def conf_filter(self, df: pd.DataFrame, threshold: float) -> pd.DataFrame:

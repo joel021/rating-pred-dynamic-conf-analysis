@@ -8,8 +8,7 @@ from recsysconfident.environment import Environment
 from recsysconfident.ml.eval.inference_error_analysis import export_elementwise_error
 from recsysconfident.ml.eval.ranking_evaluation import evaluate
 from recsysconfident.setup import Setup
-from recsysconfident.utils.files import export_metrics, export_setup, read_json, \
-    setup_and_model_exists, setup_model_results_exists
+from recsysconfident.utils.files import export_metrics, export_setup, read_json, setup_model_results_exists
 from recsysconfident.setup_manager import setup_fit
 
 
@@ -43,8 +42,8 @@ def main(setup: Setup):
         model_exists = environ.model_uri and os.path.isfile(environ.model_uri)
         is_knn = 'knn' in setup.model_name.lower()
         
-        # Fit model if requested (fit_mode == 0) and (not trained yet or reevaluation is forced)
-        if setup.fit_mode == 0 and (setup.reevaluate or not model_exists or is_knn):
+        # Fit model if requested (fit_mode == 0) and not in reevaluate mode, and (not trained yet or is a KNN model)
+        if setup.fit_mode == 0 and not setup.reevaluate and (not model_exists or is_knn):
             print(f"Fitting model for fold {fold}...")
             model = setup_fit(setup, model, fit_dl, val_dl, environ, device)
             export_setup(environ, setup.to_dict())
@@ -54,7 +53,7 @@ def main(setup: Setup):
         # Always run evaluation if we didn't skip the fold entirely
         print(f"Running evaluation for fold {fold}...")
         eval_df = export_elementwise_error(model, environ, device, fold)
-        eval_metrics = evaluate(eval_df, environ)
+        eval_metrics = evaluate(eval_df, environ, model=model, device=device)
         export_metrics(environ, {"eval": eval_metrics})
 
 

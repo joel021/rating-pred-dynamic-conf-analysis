@@ -5,12 +5,11 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import pandas as pd
 
-from recsysconfident.constants import RANK_SCORES_COL, NEG_FLAG_COL, ABS_ERROR_COL, LEARN_RANK, RELEVANCE_RATIO
-from recsysconfident.data_handling.miscellaneous import keep_users_any_r_higher_than, filter_out_users_less_than_k_inter
+from recsysconfident.constants import RANK_SCORES_COL, NEG_FLAG_COL, ABS_ERROR_COL, RELEVANCE_RATIO
+from recsysconfident.data_handling.miscellaneous import keep_users_any_r_higher_than
 from recsysconfident.environment import Environment
 from recsysconfident.ml.eval.predict_helper import predict
 from recsysconfident.ml.models.torchmodel import TorchModel
-from recsysconfident.ml.ranking.elementwise_error import set_bpr_error, elementwise_pos_neg_scores
 from recsysconfident.ml.ranking.sample_pred_negative import SamplePredNegatives
 
 
@@ -36,7 +35,7 @@ def export_elementwise_error(model, environ: Environment, device, fold: int) -> 
 def append_neg_samples(split_df: pd.DataFrame, environ: Environment, rmin: float):
 
     split_df.loc[:, NEG_FLAG_COL] = 0
-    if environ.num_negatives == 0:
+    if environ.num_negatives == 0 or environ.num_negatives is None:
         return split_df
 
     sample_pred_neg = SamplePredNegatives(data_info=environ.dataset_info, num_negatives=environ.num_negatives)
@@ -48,7 +47,6 @@ def append_neg_samples(split_df: pd.DataFrame, environ: Environment, rmin: float
     return split_df
 
 
-
 def inference(model: TorchModel, split_df: pd.DataFrame, environ: Environment, device):
 
     if hasattr(model, 'switch_to_rating'):
@@ -58,12 +56,10 @@ def inference(model: TorchModel, split_df: pd.DataFrame, environ: Environment, d
     relevance_col = environ.dataset_info.relevance_col
     r_pred_col = environ.dataset_info.r_pred_col
 
-    rmin = environ.dataset_info.rate_range[0]
     rmax = environ.dataset_info.rate_range[1]
     rt = RELEVANCE_RATIO * rmax
     split_df[relevance_col] = split_df[relevance_col].astype(float)
     split_df = keep_users_any_r_higher_than(split_df, user_col, relevance_col, rt)
-    split_df = append_neg_samples(split_df, environ, rmin)
 
     dataloader = DataLoader(
         TensorDataset(torch.from_numpy(split_df[user_col].values.astype(int)).int(),

@@ -16,9 +16,10 @@ A fully functional, generalized Jupyter notebook designed with dynamic path reso
 ### A. Generalization to Any Models & Datasets
 The notebook has been fully generalized by introducing loop structures and config variables. You can analyze any quantity of models and datasets by updating the variables in the setup cell:
 ```python
-models = ['mf']
+models = ['mf_wasserstein']
 datasets = ['ml-1m']
 ```
+*Note: The `models` variable now holds the complete name of the models (e.g. `'mf_wasserstein'`). Hardcoded string concatenations of `_wasserstein` suffixes have been completely removed.*
 
 ### B. Generalized and Extensible Metric Definitions
 The notebook supports arbitrary metrics via a generalized `metrics` definition list. This specifies the metric key inside the `metrics-*.json` files, the user-facing display name, and a direction description:
@@ -66,7 +67,7 @@ else:
 ### F. Ratings Distribution Comparison Charts
 - **Horizontal 2 x n Grid**: Plotted for the configured datasets (where *n* is the number of datasets).
 - **Observed Ratings (Row 1)**: Discrete probability distribution bar chart of the actual rating values from the test fold (the last fold *k* of the time series cross validation).
-- **Model Predicted Ratings (Row 2)**: Continuous predicted rating values distribution density with a smooth Kernel Density Estimate (KDE) plot, computed from the `eval_error_conf-{k}.csv` file's `r_pred` column.
+- **Model Predicted Ratings (Row 2)**: Continuous predicted rating values distribution density with a smooth Kernel Density Estimate (KDE) plot and a configured `binwidth=0.5` to clearly show how values fall within the discrete integer ranges, computed from the `eval_error_conf-{k}.csv` file's `r_pred` column.
 - **Visual Design**: Sleek color palette (SlateBlue observed vs. Tomato predicted), clean dotted grid backgrounds, standard spines, and aligned X-axis scales (`[0.5, 5.5]`).
 - **Dynamic Image Saving**: Automatically saves the high-resolution comparison plot to `ratings-distribution-comparison.png`.
 
