@@ -94,6 +94,7 @@ class Environment:
         self.database_name_fn = {
             "ml-1m": MovieLensReader(self.dataset_info).read,
             "amazon-movies-tvs": AmazonProductsReader(self.dataset_info).read,
+            "amazon-beauty": AmazonProductsReader(self.dataset_info).read,
             "netflix-prize": CsvReader(self.dataset_info).read,
             "ml-100k": CsvReader(self.dataset_info).read,
             "ml-100k-test": CsvReader(self.dataset_info).read,
@@ -170,5 +171,7 @@ class Environment:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             model.load_state_dict(torch.load(self.model_uri, weights_only=True, map_location=device))
             print(f"Loaded model weights from {self.model_uri}")
+        else:
+            print(f"Model without wright loaded, not treined yet.")
 
         return model, fit_dl, val_dl
