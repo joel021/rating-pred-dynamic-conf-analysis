@@ -67,7 +67,7 @@ class GATMF(SimpleConfModel):
         u_norm = torch.norm(u_graph_emb, p=2, dim=1)
         i_norm = torch.norm(i_graph_emb, p=2, dim=1)
 
-        sim = dot_product / (u_norm * i_norm)  # Compute cosine similarity
+        sim = dot_product / (u_norm * i_norm + 1e-8)  # Compute cosine similarity
 
         return torch.stack([prediction * (self.rmax - self.rmin) - self.rmin, torch.abs(sim - sim.mean())], dim=1)
 

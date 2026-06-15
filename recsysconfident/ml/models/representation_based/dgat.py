@@ -59,7 +59,7 @@ class DGAT(SimpleConfModel):
         # Compute the L2 norm of each row in matrix1 and matrix2
         u_norm = torch.norm(u_graph_emb, p=2, dim=1)
         i_norm = torch.norm(i_graph_emb, p=2, dim=1)
-        sim = (u_graph_emb * i_graph_emb).sum(dim=1).squeeze() / (u_norm * i_norm)  # Compute cosine similarity
+        sim = (u_graph_emb * i_graph_emb).sum(dim=1).squeeze() / (u_norm * i_norm + 1e-8)  # Compute cosine similarity
 
         x = F.leaky_relu(self.fc1(torch.concat([u_graph_emb, i_graph_emb], dim=1)))
         x = self.dropout(x)

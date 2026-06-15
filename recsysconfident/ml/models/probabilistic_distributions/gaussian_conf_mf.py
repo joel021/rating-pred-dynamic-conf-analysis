@@ -91,7 +91,7 @@ class GaussianConfMF(TorchModel):
 
         u_norm = torch.norm(u_x, p=2, dim=1)
         i_norm = torch.norm(i_x, p=2, dim=1)
-        sim = dot_product / (u_norm * i_norm)
+        sim = dot_product / (u_norm * i_norm + 1e-8)
 
         sim_mu = (self.w_mu_u(user_ids).squeeze() + self.w_mu_i(item_ids).squeeze()) / 2.0
         w_conf_ui = (self.w_conf_u(user_ids).squeeze() + self.w_conf_i(item_ids).squeeze()) / 2.0

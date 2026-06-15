@@ -57,9 +57,9 @@ class MatrixFactorizationModel(SimpleConfModel):
         u_norm = torch.norm(user_embedding, p=2, dim=1)
         i_norm = torch.norm(item_embedding, p=2, dim=1)
 
-        sim = dot_product / (u_norm * i_norm)  # Compute cosine similarity
+        sim = dot_product / (u_norm * i_norm + 1e-8)  # Compute cosine similarity
 
         return torch.stack([prediction * (self.rmax - self.rmin) + self.rmin, torch.abs(sim - sim.mean())], dim=1)
 
     def regularization(self):
-        return self.l2(self.user_factors) + self.l2(self.item_factors)
+        return 0

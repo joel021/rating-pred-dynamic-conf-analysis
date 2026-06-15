@@ -83,6 +83,9 @@ class CPMF(TorchModel):
         variance = 1.0 / precision
         std = torch.sqrt(variance).squeeze()
 
+        mean = torch.atleast_1d(mean)
+        std = torch.atleast_1d(std)
+        
         return torch.stack([mean, std], dim=1)
 
     def loss(self, user_ids, item_ids, labels, optimizer):
