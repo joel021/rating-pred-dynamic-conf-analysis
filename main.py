@@ -32,7 +32,7 @@ def main(setup: Setup):
                               )
 
         if setup_model_results_exists(environ.instance_dir) and not setup.reevaluate:
-            print(f"All results already obtained for fold {fold}. Skip.")
+            print(f"Looking at {environ.instance_dir}. All results already obtained for fold {fold}. Skip.")
             continue
     
         # Load model and dataloaders
@@ -43,18 +43,22 @@ def main(setup: Setup):
         is_knn = 'knn' in setup.model_name.lower()
         
         # Fit model if requested (fit_mode == 0) and not in reevaluate mode, and (not trained yet or is a KNN model)
-        if setup.fit_mode == 0 and not setup.reevaluate and (not model_exists or is_knn):
+        if setup.fit_mode == 0 and (not model_exists or is_knn):
             print(f"Fitting model for fold {fold}...")
             model = setup_fit(setup, model, fit_dl, val_dl, environ, device)
             export_setup(environ, setup.to_dict())
-        else:
-            print(f"Model already trained/loaded for fold {fold}. Skipping fitting.")
+        elif model_exists and (setup.reevaluate):
+            print(f"Model already trained/loaded for fold {fold}. Running reevaluation.")
+        elif model_exists:
+            print(f"Model already trained/loaded for fold {fold}. Running evaluation.")
+            
+        run_evaluate(model, fold, environ, device)
 
-        # Always run evaluation if we didn't skip the fold entirely
-        print(f"Running evaluation for fold {fold}...")
-        eval_df = export_elementwise_error(model, environ, device, fold)
-        eval_metrics = evaluate(eval_df, environ, model=model, device=device)
-        export_metrics(environ, {"eval": eval_metrics})
+def run_evaluate(model, fold, environ, device):
+    print(f"Running evaluation for fold {fold}...")
+    eval_df = export_elementwise_error(model, environ, device, fold)
+    eval_metrics = evaluate(eval_df, environ, model=model, device=device)
+    export_metrics(environ, {"eval": eval_metrics})
 
 
 if __name__ == '__main__':
