@@ -13,7 +13,7 @@ def setup_model_results_exists(run_folder: str):
     setup_exists = setup_and_model_exists(run_folder)
 
     eval_errors = glob.glob(f"{run_folder}/eval_error_conf-[0-9]*.csv")
-    metrics_models = glob.glob(f"{run_folder}/metrics-[0-9]*.json")
+    metrics_models = glob.glob(f"{run_folder}/metrics-*.json")
 
     return setup_exists and len(eval_errors) > 0 and len(metrics_models) > 0
 

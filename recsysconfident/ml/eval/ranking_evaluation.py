@@ -86,7 +86,7 @@ def evaluate_batched(model, split_df: pd.DataFrame, environ, device: str, k_valu
                     preds_list.append(preds)
                 
                 all_preds = torch.cat(preds_list).view(n_u, n_items)
-                padded_true = torch.zeros((n_u, n_items), device=device)
+                padded_true = torch.full((n_u, n_items), rmin, device=device)
 
                 for b_idx, u in enumerate(batch_users):
                     pos_i = pos_items_dict.get(u, [])
